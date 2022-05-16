@@ -1,0 +1,7 @@
+[
+{
+  "directory": "/home/pi/varnish-encrypto/build",
+  "command": "/usr/bin/aarch64-linux-gnu-gcc   -g -o CMakeFiles/varnish-encrypto.dir/client.c.o -c /home/pi/varnish-encrypto/client.c",
+  "file": "/home/pi/varnish-encrypto/client.c"
+}
+]

@@ -19,9 +19,6 @@ struct SERVER_SOCKET {
 };
 
 struct SERVER_SOCKET listen_on_socket (int server_port) {
-    //hard coded listening port
-//    int server_port = 9999;
-    // Creating socket file descriptor
     int server_fd;
     int opt = 1;
     struct sockaddr_in address;
@@ -127,23 +124,54 @@ void ShowCerts(SSL* ssl)
         printf("Info: No client certificates configured.\n");
 }
 
+struct CLIENT_MESSAGE {
+    int msg_len;
+    char message[];
+};
+
+struct CLIENT_MESSAGE *read_from_client(int socket_front)
+{
+    printf("reading from the client side\n");
+    char *client_buffer = calloc(1024, sizeof(char));
+    int valread;
+
+    valread = read( socket_front , client_buffer, 1024); /* get reply & decrypt */
+    struct CLIENT_MESSAGE *msg;
+    msg = malloc(sizeof(*msg) + strlen(client_buffer)*sizeof(char));
+    memcpy(msg -> message, client_buffer, strlen(client_buffer));
+    free(client_buffer);
+    msg->msg_len = valread;
+    return msg;
+}
+
+int read_backend_write_client(SSL *ssl, int client_socket){
+    int bytes;
+    char buf[1024] = {0};
+    do{
+        printf("iterating... \n");
+        bytes = SSL_read(ssl, buf, sizeof(buf)); /* get reply & decrypt */
+        buf[bytes] = 0;
+//        printf("Received: \"%s\"\n", buf);
+        send(client_socket , buf , strlen(buf) , 0 );
+        printf("Bytes: \"%d\"\n", bytes);
+    }while(SSL_pending(ssl) > 0);
+    return 1;
+} 
+
 int main(int argc, char const *argv[])
 {
     SSL_CTX *ctx;
     int backend;
     SSL *ssl;
 
-    char buf[1024] = {0};
-    char buffer[1024] = {0};
-    int bytes;
     char *hostname;
     int portnum;
     int server_fd;
-    int new_socket;
+    int client_socket;
     int client_port;
 
     if(argc < 4){
-      printf("correct usage is \"binary file\", listening port, backend servername, backend server port ");
+      printf("correct usage is \"binary file\", listening port, backend servername, backend server port \n");
       return 0;
     }
     client_port = atoi(argv[1]);
@@ -162,53 +190,47 @@ int main(int argc, char const *argv[])
     struct sockaddr_in address = server_socket.address;
     int addrlen = sizeof(address);
 
-    int valread;
-    char client_buffer[1024] = {0};
-
     struct BACKEND_SOCKET backend_socket;
+    struct CLIENT_MESSAGE *client_message;
 
-//    hostname="node3.codeatyolo.link";
-//    portnum=443;
     backend_socket = create_be_socket(hostname, portnum);
     backend = OpenConnection(backend_socket.sd, backend_socket.address, hostname);
+    SSL_set_fd(ssl, backend);
 
     while(1) {
-	if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0)
+	if ((client_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0)
 	{
 	    perror("accept");
 	    exit(EXIT_FAILURE);
 	}
-        valread = read( new_socket , client_buffer, 1024);
+        printf("accepted connection\n");
+        client_message = read_from_client(client_socket);
+	printf("%s\n",client_message->message );
 
-	printf("%s\n",client_buffer );
 
-        SSL_set_fd(ssl, backend);
-
-        if ( SSL_connect(ssl) == FAIL )   /* perform the connection */
-             ERR_print_errors_fp(stderr);
+        if ( SSL_connect(ssl) == FAIL )  /* perform the connection */
+        { 
+            printf("ERROR WHEN ESTABLISHING BACKEND CONNECTION \n\n");
+            ERR_print_errors_fp(stderr);
+        }
         else
         {
             printf("\n\nConnected with %s encryption\n", SSL_get_cipher(ssl));
             ShowCerts(ssl);        /* get any certs */
-            if(SSL_write(ssl, client_buffer, strlen(client_buffer)) <= 0)
+            if(SSL_write(ssl, client_message->message, strlen(client_message->message)) <= 0)
             {
-               ERR_print_errors_fp(stderr);
-               return 0;
+                printf("ERROR DURING SSL WRITE \n\n");
+                ERR_print_errors_fp(stderr);
+                return 0;
             }
-            memset(client_buffer, 0, 1024);
-            printf("iterating... \n");
-            do{
-                bytes = SSL_read(ssl, buf, sizeof(buf)); /* get reply & decrypt */
-                buf[bytes] = 0;
-                printf("Received: \"%s\"\n", buf);
-                send(new_socket , buf , strlen(buf) , 0 );
-                printf("Bytes: \"%d\"\n", bytes);
-             }while(SSL_pending(ssl) > 0);
+            if (read_backend_write_client(ssl, client_socket) < 1 ){
+                printf("error during reading from backend\n");
+                return 0; 
+            }
+            free(client_message);
 
-            printf("done reading from backend\n");
-            memset(buf, 0, 1024);
+            printf("done reading from backend\n\n");
         }
-        printf("Backend closed\n\n\n\n");
     }
     close(backend);
     return 0;

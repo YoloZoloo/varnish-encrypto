@@ -1,0 +1,1 @@
+/usr/bin/aarch64-linux-gnu-gcc -g -rdynamic CMakeFiles/varnish-encrypto.dir/client.c.o -o varnish-encrypto  /usr/lib/aarch64-linux-gnu/libssl.so /usr/lib/aarch64-linux-gnu/libcrypto.so 
