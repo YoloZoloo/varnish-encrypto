@@ -1,4 +1,4 @@
-#include <stdio.hpp>
+#include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
@@ -12,13 +12,16 @@
 #include <openssl/bio.h>
 
 #define FAIL -1
+#define RECONNECT 0
+#define SUCCESS 1
+#define MAX_EVENTS 100
 
-struct SERVER_SOCKET {
+struct CLIENT_SOCKET {
      int server_fd;
      struct sockaddr_in address;
 };
 
-struct SERVER_SOCKET listen_on_socket (int server_port) {
+struct CLIENT_SOCKET listen_on_socket (int server_port) {
     int server_fd;
     int opt = 1;
     struct sockaddr_in address;
@@ -50,7 +53,7 @@ struct SERVER_SOCKET listen_on_socket (int server_port) {
             perror("listen");
             exit(EXIT_FAILURE);
 	}
-        struct SERVER_SOCKET server_socket = {server_fd, address};
+        struct CLIENT_SOCKET server_socket = {server_fd, address};
         return server_socket;
 }
 
@@ -59,7 +62,7 @@ struct BACKEND_SOCKET {
     struct sockaddr_in address;
 };
 
-struct BACKEND_SOCKET create_be_socket (const char *hostname, int port) {
+struct BACKEND_SOCKET *create_be_socket (const char *hostname, int port) {
     int sd;
     struct hostent *host;
     struct sockaddr_in addr;
@@ -73,14 +76,19 @@ struct BACKEND_SOCKET create_be_socket (const char *hostname, int port) {
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = *(long*)(host->h_addr);
-    struct BACKEND_SOCKET backend_socket = {sd, addr};
+    free(host);
+    struct BACKEND_SOCKET *backend_socket = (struct BACKEND_SOCKET *) malloc(sizeof(addr) + sizeof(int)+sizeof(sd));
+    backend_socket->address = addr;
+    backend_socket->sd = sd;
     return backend_socket;
 }
 
 int OpenConnection(int sd, struct sockaddr_in addr, char* hostname)
 {
+    printf("trying backend connection");
     if ( connect(sd, (struct sockaddr*)&addr, sizeof(addr)) != 0 )
     {
+        printf("closing backend connection due to error");
         close(sd);
         perror(hostname);
         abort();
@@ -90,7 +98,7 @@ int OpenConnection(int sd, struct sockaddr_in addr, char* hostname)
 //Load crypto
 SSL_CTX* InitCTX(void)
 {
-    SSL_METHOD *method;
+    const SSL_METHOD *method;
     SSL_CTX *ctx;
     OpenSSL_add_all_algorithms();  /* Load cryptos, et.al. */
     SSL_load_error_strings();   /* Bring in and register error messages */
@@ -124,114 +132,87 @@ void ShowCerts(SSL* ssl)
         printf("Info: No client certificates configured.\n");
 }
 
-struct CLIENT_MESSAGE {
-    int msg_len;
-    char message[];
-};
-
-struct CLIENT_MESSAGE *read_from_client(int socket_front)
+char* read_from_client(int socket_front)
 {
     printf("reading from the client side\n");
-    char *client_buffer = calloc(1024, sizeof(char));
+    char *client_buffer = (char*)calloc(1024, sizeof(char));
     int valread;
 
     valread = read( socket_front , client_buffer, 1024); /* get reply & decrypt */
-    struct CLIENT_MESSAGE *msg;
-    msg = malloc(sizeof(*msg) + strlen(client_buffer)*sizeof(char));
-    memcpy(msg -> message, client_buffer, strlen(client_buffer));
-    free(client_buffer);
-    msg->msg_len = valread;
-    return msg;
+    return client_buffer;
+}
+
+int backend_write(SSL* ssl, char *client_message){
+    int write_ret;
+    int ret;
+    write_ret = SSL_write(ssl, client_message, strlen(client_message));
+    if(write_ret <= 0)
+    {   
+        ret = SSL_get_error(ssl ,write_ret);
+        if (ret == SSL_ERROR_ZERO_RETURN)
+        {
+            printf("SSL_ERROR_ZERO_RETURN\n");
+            return RECONNECT;
+        }
+        else if(ret == SSL_ERROR_WANT_WRITE)
+        {
+            printf("SSL_ERROR_WANT_WRITE\n");
+            return RECONNECT;
+        }
+        else if(ret == SSL_ERROR_WANT_CONNECT){
+            printf("SSL_ERROR_WANT_CONNECT\n");
+            return RECONNECT;
+        }
+        else if (ret == SSL_ERROR_WANT_X509_LOOKUP){
+            printf("SSL_ERROR_WANT_X509_LOOKUP\n");
+            return RECONNECT;
+        }
+        else{
+            // read_backend_write_client(ssl, client_socket);
+            printf("Error reason: %d\n", ret);
+            return FAIL;
+        }
+    }
+    return SUCCESS;
 }
 
 int read_backend_write_client(SSL *ssl, int client_socket){
+    int ret;
     int bytes;
     char buf[1024] = {0};
     do{
         printf("iterating... \n");
         bytes = SSL_read(ssl, buf, sizeof(buf)); /* get reply & decrypt */
+        if(bytes <= 0)
+        {   
+            ret = SSL_get_error(ssl ,bytes);
+            if (ret == SSL_ERROR_ZERO_RETURN)
+            {
+                printf("SSL_ERROR_ZERO_RETURN: \n");
+                return 0;
+            }
+            else if(ret == SSL_ERROR_WANT_WRITE)
+            {
+                printf("SSL_ERROR_WANT_WRITE\n");
+                return 0;
+            }
+            else if(ret == SSL_ERROR_WANT_CONNECT){
+                printf("SSL_ERROR_WANT_CONNECT\n");
+                return 0;
+            }
+            else if (ret == SSL_ERROR_WANT_X509_LOOKUP){
+                printf("SSL_ERROR_WANT_X509_LOOKUP\n");
+                return 0;
+            }
+            else{
+                // read_backend_write_client(ssl, client_socket);
+                printf("Error reason: %d\n", ret);
+                return FAIL;
+            }
+        }
         buf[bytes] = 0;
-//        printf("Received: \"%s\"\n", buf);
         send(client_socket , buf , strlen(buf) , 0 );
         printf("Bytes: \"%d\"\n", bytes);
     }while(SSL_pending(ssl) > 0);
     return 1;
 } 
-
-int main(int argc, char const *argv[])
-{
-    SSL_CTX *ctx;
-    int backend;
-    SSL *ssl;
-
-    char *hostname;
-    int portnum;
-    int server_fd;
-    int client_socket;
-    int client_port;
-
-    if(argc < 4){
-      printf("correct usage is \"binary file\", listening port, backend servername, backend server port \n");
-      return 0;
-    }
-    client_port = atoi(argv[1]);
-    hostname = argv[2];
-    portnum = atoi(argv[3]);
-
-    printf("port: %d, hostname: %s, portnum: %d \n", client_port, hostname, portnum);
-
-    SSL_library_init();
-    ctx = InitCTX();
-    ssl = SSL_new(ctx);      /* create new SSL connection state */
-    SSL *ssl_front = SSL_new(ctx);
-
-    struct SERVER_SOCKET server_socket = listen_on_socket(client_port);
-    server_fd = server_socket.server_fd;
-    struct sockaddr_in address = server_socket.address;
-    int addrlen = sizeof(address);
-
-    struct BACKEND_SOCKET backend_socket;
-    struct CLIENT_MESSAGE *client_message;
-
-    backend_socket = create_be_socket(hostname, portnum);
-    backend = OpenConnection(backend_socket.sd, backend_socket.address, hostname);
-    SSL_set_fd(ssl, backend);
-
-    while(1) {
-	if ((client_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0)
-	{
-	    perror("accept");
-	    exit(EXIT_FAILURE);
-	}
-        printf("accepted connection\n");
-        client_message = read_from_client(client_socket);
-	printf("%s\n",client_message->message );
-
-
-        if ( SSL_connect(ssl) == FAIL )  /* perform the connection */
-        { 
-            printf("ERROR WHEN ESTABLISHING BACKEND CONNECTION \n\n");
-            ERR_print_errors_fp(stderr);
-        }
-        else
-        {
-            printf("\n\nConnected with %s encryption\n", SSL_get_cipher(ssl));
-            ShowCerts(ssl);        /* get any certs */
-            if(SSL_write(ssl, client_message->message, strlen(client_message->message)) <= 0)
-            {
-                printf("ERROR DURING SSL WRITE \n\n");
-                ERR_print_errors_fp(stderr);
-                return 0;
-            }
-            if (read_backend_write_client(ssl, client_socket) < 1 ){
-                printf("error during reading from backend\n");
-                return 0; 
-            }
-            free(client_message);
-
-            printf("done reading from backend\n\n");
-        }
-    }
-    close(backend);
-    return 0;
-}

@@ -539,32 +539,32 @@ ContinuousSubmit/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/ContinuousSubmit.dir/build.make CMakeFiles/ContinuousSubmit.dir/build
 .PHONY : ContinuousSubmit/fast
 
-client.o: client.c.o
+src/client.o: src/client.cpp.o
 
-.PHONY : client.o
+.PHONY : src/client.o
 
 # target to build an object file
-client.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/varnish-encrypto.dir/build.make CMakeFiles/varnish-encrypto.dir/client.c.o
-.PHONY : client.c.o
+src/client.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/varnish-encrypto.dir/build.make CMakeFiles/varnish-encrypto.dir/src/client.cpp.o
+.PHONY : src/client.cpp.o
 
-client.i: client.c.i
+src/client.i: src/client.cpp.i
 
-.PHONY : client.i
+.PHONY : src/client.i
 
 # target to preprocess a source file
-client.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/varnish-encrypto.dir/build.make CMakeFiles/varnish-encrypto.dir/client.c.i
-.PHONY : client.c.i
+src/client.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/varnish-encrypto.dir/build.make CMakeFiles/varnish-encrypto.dir/src/client.cpp.i
+.PHONY : src/client.cpp.i
 
-client.s: client.c.s
+src/client.s: src/client.cpp.s
 
-.PHONY : client.s
+.PHONY : src/client.s
 
 # target to generate assembly for a file
-client.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/varnish-encrypto.dir/build.make CMakeFiles/varnish-encrypto.dir/client.c.s
-.PHONY : client.c.s
+src/client.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/varnish-encrypto.dir/build.make CMakeFiles/varnish-encrypto.dir/src/client.cpp.s
+.PHONY : src/client.cpp.s
 
 # Help Target
 help:
@@ -606,9 +606,9 @@ help:
 	@echo "... NightlyTest"
 	@echo "... NightlyUpdate"
 	@echo "... varnish-encrypto"
-	@echo "... client.o"
-	@echo "... client.i"
-	@echo "... client.s"
+	@echo "... src/client.o"
+	@echo "... src/client.i"
+	@echo "... src/client.s"
 .PHONY : help
 
 

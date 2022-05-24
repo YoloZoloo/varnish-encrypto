@@ -1,0 +1,36 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/pi/varnish-encrypto/src/client.cpp
+stdio.h
+-
+stdlib.h
+-
+errno.h
+-
+unistd.h
+-
+string.h
+-
+sys/socket.h
+-
+resolv.h
+-
+netdb.h
+-
+arpa/inet.h
+-
+openssl/ssl.h
+-
+openssl/err.h
+-
+openssl/bio.h
+-
+sys/epoll.h
+-
+
