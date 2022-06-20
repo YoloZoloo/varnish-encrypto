@@ -10,6 +10,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/bio.h>
+#include <fcntl.h>
 
 #define FAIL -1
 #define RECONNECT 0
@@ -32,7 +33,6 @@ struct CLIENT_SOCKET listen_on_socket (int server_port) {
           exit(EXIT_FAILURE);
      }
 
-    // Forcefully attaching socket to the port 8080
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR , &opt, sizeof(opt)))
     {
         perror("setsockopt");
@@ -76,7 +76,6 @@ struct BACKEND_SOCKET *create_be_socket (const char *hostname, int port) {
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = *(long*)(host->h_addr);
-    free(host);
     struct BACKEND_SOCKET *backend_socket = (struct BACKEND_SOCKET *) malloc(sizeof(addr) + sizeof(int)+sizeof(sd));
     backend_socket->address = addr;
     backend_socket->sd = sd;
@@ -85,7 +84,7 @@ struct BACKEND_SOCKET *create_be_socket (const char *hostname, int port) {
 
 int OpenConnection(int sd, struct sockaddr_in addr, char* hostname)
 {
-    printf("trying backend connection");
+    printf("trying backend connection\n");
     if ( connect(sd, (struct sockaddr*)&addr, sizeof(addr)) != 0 )
     {
         printf("closing backend connection due to error");
@@ -111,6 +110,8 @@ SSL_CTX* InitCTX(void)
     }
     return ctx;
 }
+
+
 
 void ShowCerts(SSL* ssl)
 {
@@ -181,8 +182,9 @@ int read_backend_write_client(SSL *ssl, int client_socket){
     int bytes;
     char buf[1024] = {0};
     do{
-        printf("iterating... \n");
+        printf("backend-read iterating... \n");
         bytes = SSL_read(ssl, buf, sizeof(buf)); /* get reply & decrypt */
+        printf("bytes: %d\n", bytes);
         if(bytes <= 0)
         {   
             ret = SSL_get_error(ssl ,bytes);
@@ -215,4 +217,4 @@ int read_backend_write_client(SSL *ssl, int client_socket){
         printf("Bytes: \"%d\"\n", bytes);
     }while(SSL_pending(ssl) > 0);
     return 1;
-} 
+}
