@@ -20,30 +20,134 @@
 #define RECONNECT 0
 #define SUCCESS 1
 #define MAX_EVENTS 100
+#define THREAD_NUMBER 1
+#define THREAD_SLEEP 21
+
+pthread_mutex_t socket_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t condition_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t condition_cond= PTHREAD_COND_INITIALIZER;
+pthread_t thread_pool;
+int thread_id;
+int count = 0;
+
+struct CLIENT_SOCKET client_socket;
+struct sockaddr_in address;
+struct sockaddr_in backend_address;
+socklen_t addrlen;
+
+int client_port;
+char *backend_hostname;
+int backend_port;
+int client_sd;
+int backend_sd;
+
+
 
 void setnonblocking(int fd) {
     // where socketfd is the socket you want  to make non-blocking
     int status = fcntl(fd, F_SETFL, O_NONBLOCK);
-    printf("setting socket to nonblcoking\n");
+    printf("setting socket to nonblocking\n");
     if (status == -1){
         perror("calling fcntl");
         // handle the error.  By the way, I've never seen fcntl fail in this way
     }
 }
 
-// void *handle_backend(void*){
-//     printf("creating thread\n");
-//     return NULL;
-// }
+void *handle_backend(void*){
+    SSL_library_init();
+    int newsockfd;
+    int backend;
+
+    printf("---------------starting thread-------------------\n");
+    SSL_CTX *ctx = InitCTX();
+
+    int ssl_connect_status;
+
+    for(;;)
+    {
+        printf("here %d\n", pthread_self());
+        pthread_mutex_lock(&condition_mutex);
+        while(thread_id != 0)
+        {
+            printf("went into sleep\n");
+            pthread_cond_wait(&condition_cond, &condition_mutex);
+        }
+        pthread_mutex_unlock(&condition_mutex);
+        // The listening socket is ready; this means a new peer is connecting.
+        newsockfd = accept(client_sd, (struct sockaddr *)&address, (socklen_t*) &addrlen);
+        printf("newsocket_fd: %d\n", newsockfd);
+        // epoll_ctl(epfd, EPOLLONESHOT, client_sd, &ev);
+        if (newsockfd < 0) 
+        {
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+            {
+            // This can happen due to the nonblocking socket mode; in this
+            // case don't do anything, but print a notice (since these events
+            // are extremely rare and interesting to observe...)
+                printf("accept returned EAGAIN or EWOULDBLOCK\n");
+            } 
+            else
+            {
+                perror ("accept");
+            }
+        }
+        else 
+        {
+            printf("accepted connection to create a read-ready file descriptor\n");
+            SSL* ssl = SSL_new(ctx);
+            backend_sd = create_be_socket (backend_hostname, backend_port, backend_address);
+            backend = OpenConnection(backend_sd, backend_address, backend_hostname);
+            SSL_set_fd(ssl, backend);
+            // accepted socket is ready for reading
+            char* client_message = read_from_client(newsockfd);
+            printf("%s\n",client_message );
+            ssl_connect_status = SSL_connect(ssl);
+            if ( ssl_connect_status == FAIL )  /* perform the connection */
+            { 
+                SSL_shutdown(ssl);
+                SSL_free(ssl);
+                close(backend);
+                printf("ERROR WHEN ESTABLISHING BACKEND CONNECTION \n\n");
+                ERR_print_errors_fp(stderr);
+                exit(0);
+            }
+            ShowCerts(ssl);
+            printf("backend write: %d\n", SSL_write(ssl, client_message, strlen(client_message)));
+            if(read_backend_write_client(ssl, newsockfd) == FAIL)
+            {
+                // close(backend);
+                // SSL* ssl;
+                // ssl = SSL_new(ctx);
+                // backend_sd = create_be_socket (backend_hostname, backend_port, backend_address);
+                // backend = OpenConnection(backend_sd, backend_address, backend_hostname);
+                // SSL_set_fd(ssl, backend);
+                // ssl_connect_status = SSL_do_handshake(ssl);
+                // printf("Handshake: %d\n", ssl_connect_status );
+                // ssl_connect_status = SSL_connect(ssl);
+                // SSL_write(ssl, client_message, strlen(client_message));
+                if(read_backend_write_client(ssl, newsockfd) == FAIL)
+                {
+                    close(backend);
+                    SSL_shutdown(ssl);
+                    SSL_free(ssl);
+                    free(client_message);
+                    close(newsockfd);
+                    printf("Error during reading from the back end\n");
+                    exit(0);
+                }
+            }
+            SSL_shutdown(ssl);
+            SSL_free(ssl);
+            free(client_message);
+            close(newsockfd);
+        }
+        thread_id = 1;
+    }
+}
 
 int main(int argc, char *argv[])
 {
-    char *backend_hostname;
-    int backend_port;
-    int client_sd;
     int newsockfd;
-    int client_port;
-    int back_sd_arr[20];
 
     if(argc < 4){
       printf("correct usage is \"binary file\", listening port, backend servername, backend server port \n");
@@ -54,32 +158,37 @@ int main(int argc, char *argv[])
     backend_port = atoi(argv[3]);
     printf("port: %d, hostname: %s, por num: %d \n", client_port, backend_hostname, backend_port);
 
-    SSL_library_init();
-    int backend;
-    SSL_CTX *ctx = InitCTX();
-    SSL* ssl = SSL_new(ctx);
+    struct hostent *host;
+    if ( (host = gethostbyname(backend_hostname)) == NULL )
+    {
+        perror(backend_hostname);
+        abort();
+    }
+    backend_sd = socket(PF_INET, SOCK_STREAM, 0);
+    bzero(&backend_address, sizeof(backend_address));
+    backend_address.sin_family = AF_INET;
+    backend_address.sin_port = htons(backend_port);
+    backend_address.sin_addr.s_addr = *(long*)(host->h_addr);
 
     struct CLIENT_SOCKET client_socket = (struct CLIENT_SOCKET) listen_on_socket(client_port);
     client_sd = client_socket.server_fd;
     printf("client sd: %d\n", client_sd);
     setnonblocking(client_sd);
-    struct sockaddr_in address = client_socket.address;
-    int addrlen = sizeof(address);
+    address = client_socket.address;
+    addrlen = sizeof(address);
 
-    struct BACKEND_SOCKET *backend_socket;
-    int backend_ret;
-    backend_socket = create_be_socket(backend_hostname, backend_port);
-    backend = OpenConnection(backend_socket->sd, backend_socket->address, backend_hostname);
-    SSL_set_fd(ssl, backend);
-
-
-    //create threadpool
-    // for (pthread_t thread = 0; thread < 20; thread++)
-    // {
-    //     pthread_create(&thread, NULL, handle_backend, NULL);
-    //     pthread_join(thread, NULL);
-    // }
-
+    //initialize threadpool
+    // int thread_id;
+    // thread_id
+    for (pthread_t thread = 0; thread < THREAD_NUMBER; thread++)
+    {
+        thread_id = 1;
+        pthread_create(&thread, NULL, handle_backend, NULL);
+        printf("thread_id: %d\n", thread_id);
+        thread_pool = thread_id;
+        // thread_pool[thread] = thread_id;
+        // pthread_join(thread, NULL);
+    }
 
     struct epoll_event ev, events[MAX_EVENTS];
     int epfd = epoll_create(1);
@@ -104,146 +213,11 @@ int main(int argc, char *argv[])
 
             if (events[i].data.fd == client_sd)
             {
-                // The listening socket is ready; this means a new peer is connecting.
-                newsockfd = accept(client_sd, (struct sockaddr *)&address, (socklen_t*)&addrlen);
-                printf("newsocket_fd: %d\n", newsockfd);
-                // epoll_ctl(epfd, EPOLLONESHOT, client_sd, &ev);
-                if (newsockfd < 0) 
-                {
-                    if (errno == EAGAIN || errno == EWOULDBLOCK)
-                    {
-                    // This can happen due to the nonblocking socket mode; in this
-                    // case don't do anything, but print a notice (since these events
-                    // are extremely rare and interesting to observe...)
-                        printf("accept returned EAGAIN or EWOULDBLOCK\n");
-                    } 
-                    else
-                    {
-                        perror ("accept");
-                    }
-                }
-                else 
-                {
-                    printf("accepted connection to create a read-ready file descriptor\n");
-                    // accepted socket is ready for reading
-                    char* client_message = read_from_client(newsockfd);
-                    printf("%s\n",client_message );
-                    ssl_connect_status = SSL_connect(ssl);
-                    if ( ssl_connect_status == FAIL )  /* perform the connection */
-                    { 
-                        printf("ERROR WHEN ESTABLISHING BACKEND CONNECTION \n\n");
-                        ERR_print_errors_fp(stderr);
-                        close(backend);
-                        free(backend_socket);
-                        backend_socket = NULL;
-                        SSL_free(ssl);
-                        SSL_CTX_free(ctx);
-                        SSL_CTX *ctx = InitCTX();
-                        SSL* ssl = SSL_new(ctx);
-                        struct BACKEND_SOCKET *backend_socket = create_be_socket(backend_hostname, backend_port);
-                        backend = OpenConnection(backend_socket->sd, backend_socket->address, backend_hostname);
-                        SSL_set_fd(ssl, backend);
-                        ssl_connect_status = SSL_connect(ssl);
-                        printf("ssl_connect_status:%d\n", ssl_connect_status);
-                        if(ssl_connect_status < 0)
-                        {
-                            free(ssl);
-                            printf("SSL_connect failed more than twice in a row\n");
-                            return 0;
-                        }
-                        else{
-                            printf("ssl_connect_status: %d\n", ssl_connect_status);
-                        }
-                    }
-                    ShowCerts(ssl);
-                    printf("backend write: %d\n", SSL_write(ssl, client_message, strlen(client_message)));
-                    if(read_backend_write_client(ssl, newsockfd) == FAIL)
-                    {
-                        close(backend);
-                        SSL_free(ssl);
-                        SSL_CTX_free(ctx);
-                        free(backend_socket);
-                        backend_socket = NULL;
-                        SSL_CTX *ctx = InitCTX();
-                        SSL* ssl = SSL_new(ctx);
-                        
-                        struct BACKEND_SOCKET *backend_socket = create_be_socket(backend_hostname, backend_port);
-                        backend = OpenConnection(backend_socket->sd, backend_socket->address, backend_hostname);
-                        SSL_set_fd(ssl, backend);
-                        ssl_connect_status = SSL_do_handshake(ssl);
-                        printf("Handshake: %d\n", ssl_connect_status );
-                        ssl_connect_status = SSL_connect(ssl);
-                        SSL_write(ssl, client_message, strlen(client_message));
-                        if(read_backend_write_client(ssl, newsockfd) == FAIL)
-                        {
-                            printf("Error during reading from the back end\n");
-                            return 0;
-                        }
-                    }
-                    free(client_message);
-                    close(newsockfd);
-                }
-            }
-            else 
-            {
-                // A peer socket is ready.
-                if (events[i].events & EPOLLIN)
-                {
-                    // Ready for reading.
-                    int fd = events[i].data.fd;
-                    char *client_buffer = (char*)calloc(1024, sizeof(char));
-                    if ( (n = read(fd, client_buffer, 1024)) < 0)
-                    {
-                        if (errno == ECONNRESET)
-                        {
-                            close(fd);
-                            events[i].data.fd = -1;
-                        } 
-                        else {
-                            printf("readline error\n");
-                        }
-                    }
-                    else if (n == 0)
-                    {
-                        printf("client socket closed\n");
-                        close(fd);
-                        events[i].data.fd = -1;
-                    }
-                    printf("received from client: \n %s", client_buffer);
-                    ssl_connect_status = SSL_connect(ssl);
-                    if ( ssl_connect_status == FAIL )  /* perform the connection */
-                    { 
-                        printf("ERROR WHEN ESTABLISHING BACKEND CONNECTION \n\n");
-                        ERR_print_errors_fp(stderr);
-                        close(backend);
-                        free(backend_socket);
-                        free(ssl);
-                        free(ctx);
-                        SSL_CTX *ctx = InitCTX();
-                        SSL* ssl = SSL_new(ctx);
-                        struct BACKEND_SOCKET *backend_socket = create_be_socket(backend_hostname, backend_port);
-                        backend = OpenConnection(backend_socket->sd, backend_socket->address, backend_hostname);
-                        SSL_set_fd(ssl, backend);
-                        ssl_connect_status = SSL_connect(ssl);
-                        if(ssl_connect_status < 0)
-                        {
-                            free(ssl);
-                            printf("SSL_connect failed more than twice in a row\n");
-                            return 0;
-                        }
-                        else{
-                            printf("ssl_connect_status: %d\n", ssl_connect_status);
-                        }
-                    }
-                    SSL_write(ssl, client_buffer, strlen(client_buffer));
-                    read_backend_write_client(ssl, newsockfd);
-                    free(client_buffer);
-                    close(fd);
-                }
-                else if (events[i].events & EPOLLOUT)
-                {
-                    
-                }
+                printf("count: %d\n", count);
+                thread_id = 0;
+                pthread_cond_signal(&condition_cond);
+                count++;
+                printf("count2: %d\n", count);
             }
         } 
     }

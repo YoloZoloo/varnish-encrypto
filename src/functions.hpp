@@ -17,9 +17,17 @@
 #define SUCCESS 1
 #define MAX_EVENTS 100
 
+
+struct SOCKET_INFO {
+    int backend_port;
+    char *backend_hostname;
+    int server_fd;
+    struct sockaddr_in address;
+};
+
 struct CLIENT_SOCKET {
-     int server_fd;
-     struct sockaddr_in address;
+    int server_fd;
+    struct sockaddr_in address;
 };
 
 struct CLIENT_SOCKET listen_on_socket (int server_port) {
@@ -62,24 +70,20 @@ struct BACKEND_SOCKET {
     struct sockaddr_in address;
 };
 
-struct BACKEND_SOCKET *create_be_socket (const char *hostname, int port) {
+int create_be_socket (const char *hostname, int port, struct sockaddr_in addr) {
     int sd;
     struct hostent *host;
-    struct sockaddr_in addr;
     if ( (host = gethostbyname(hostname)) == NULL )
     {
         perror(hostname);
         abort();
     }
     sd = socket(PF_INET, SOCK_STREAM, 0);
-    bzero(&addr, sizeof(addr));
+    // bzero(&addr, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = *(long*)(host->h_addr);
-    struct BACKEND_SOCKET *backend_socket = (struct BACKEND_SOCKET *) malloc(sizeof(addr) + sizeof(int)+sizeof(sd));
-    backend_socket->address = addr;
-    backend_socket->sd = sd;
-    return backend_socket;
+    return sd;
 }
 
 int OpenConnection(int sd, struct sockaddr_in addr, char* hostname)
@@ -174,6 +178,7 @@ int backend_write(SSL* ssl, char *client_message){
             return FAIL;
         }
     }
+    // signal(SIGPIPE, SIGPIPE);
     return SUCCESS;
 }
 
