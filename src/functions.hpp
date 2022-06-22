@@ -15,7 +15,6 @@
 #define FAIL -1
 #define RECONNECT 0
 #define SUCCESS 1
-#define MAX_EVENTS 100
 
 
 struct SOCKET_INFO {
