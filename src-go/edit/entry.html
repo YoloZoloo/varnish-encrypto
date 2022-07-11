@@ -1,0 +1,48 @@
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="/edit/css/entry-edit.css"/>
+</head>
+<body onload = "setProfilePicture()">
+    <div id = "header"></div>
+<h1>Your Profile</h1>
+<p>Edit Profile</p>
+<form action="edit.php" method="post" name="entryEditForm" ENCTYPE="multipart/form-data">
+
+    <p>Lastname(Optional) and Firstname(Required)</p>
+    <input type="text" maxlength="18" id="lastname" name="lastname">
+    <input type="text" maxlength="18" id="firstname" name="firstname">
+    <div id="nameAlert"></div>
+
+    <p>User ID(Required) and Current Password(Required)</p>
+    <input type="text" maxlength="18" id="user_id" name="user_id">
+    <input type="password" id="beforePassword" name="beforePassword">
+    <div id="user_idAlert"></div>
+    <div id="beforePasswordAlert"></div>
+
+        <p>Password and Confirm Password(Enter only when you change current password)</p>
+        <input type="password" id="afterPassword" name="password">
+        <input type="password" id="afterPasswordCheck">
+        <div id="afterPasswordAlert"></div>
+        <div id="afterPasswordCheckAlert"></div>
+    </form>
+    <br>
+    <div id="passRules">
+        <p>*Password Must include half width number, Capital character and non-capital character</p>
+        <p>*Password must be 6~18 characters</p>
+    </div>
+    <p>Profile Photo(Optional)</p>
+    <input type = "file" id = "iconset" name = "file" accept="image/*">
+    <br>
+    <img id = "result" hidden><br>
+    <img src = "/defaultIcon.png" id="profileimage">
+    <canvas id = "canvas" name = "photo"></canvas>
+    <div id="iconPreview">Preview<div>
+    <button id="submitButton">Apply Changes</button><BR>
+<br>
+    <button onclick="location.href='/chatscreen'">Go back to Lobby</button>
+
+<script LANGUAGE = "javascript" src="/edit/js/display_onload.js"></script>
+<script LANGUAGE = "javascript" src="/edit/js/entry-edit.js"></script>
+<script LANGUAGE = "javascript" src="/edit/js/createimagefile.js"></script>
+</body>
+</html>

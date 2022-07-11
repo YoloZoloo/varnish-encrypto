@@ -1,0 +1,41 @@
+<html>
+<head>
+    <meta charset = "utf-8">
+    <title>Login Page</title>
+    <meta Cache-Control: public, max-age=604800, s-maxage=604800>
+</head>
+<body style = 'text-align: center'>
+    <h2>Log In</h2>
+    <p id = "warning" style = "color: red"><?php echo $warning;?></p>
+
+    <form method = "post" action = "/login">
+        user ID: <input type = "text" maxlength = 18 name = "user_id" value = "" autocomplete = "off"><br>
+        password: <input type = "password" name = "password" value = "" autocomplete = "off"><br>
+        <input type = "submit" hidden>
+    </form>
+
+        <button onclick = "validateLoginInfo()">Sign in</button><br><br>
+
+        <a href = "/edit/entry.html">Sign Up</a>
+</body>
+    </html>
+<script LANGUAGE = "javascript">
+let loginForm = document.forms[0];
+let warning = document.getElementById("warning");
+function validateLoginInfo(){
+    if(loginForm[0].value === "" && loginForm[1].value === ""){
+        warning.innerHTML = "Please enter user ID and password";
+        return;
+    }
+    else if(loginForm[0].value === ""){
+        warning.innerHTML = "Please enter user ID";
+        return;
+    }
+    else if(loginForm[1].value === ""){
+        warning.innerHTML = "Please enter password";
+        return;
+    }
+    warning.innerHTML = "";
+    loginForm.submit();
+}
+</script>

@@ -12,9 +12,7 @@ import (
 
 func login(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		// fmt.Fprintf(w, "GET! \n")
-		// http.ServeFile(w, r, "index.html") \
-		fmt.Fprintf(w, "<html><body>Hey</body></html>")
+		http.ServeFile(w, r, "login.html")
 		return
 
 	} else if r.Method == "POST" {
@@ -24,19 +22,14 @@ func login(w http.ResponseWriter, r *http.Request) {
 		}
 		user_id := r.FormValue("user_id")
 		password := r.FormValue("password")
-		fmt.Fprintf(w, "user_id: %s  \n", user_id)
-		fmt.Fprintf(w, "password: %s \n", password)
 		db, err := sql.Open("mysql", "chat:password@tcp(node3.codeatyolo.link:3306)/chat")
 		// if there is an error opening the connection, handle it
 		if err != nil {
 			panic(err.Error())
 		}
 		defer db.Close()
-		// perform a db.Query select
-		fmt.Fprintf(w, "connected to the mysql. \n")
 
 		res, err := db.Query("SELECT count(*) as cnt FROM user_m WHERE user_id = ? and password = ?", user_id, password)
-		fmt.Fprintf(w, "done select query. \n")
 		if res.Next() {
 
 			var cnt int
@@ -48,10 +41,10 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 			if cnt == 1 {
 				sess := globalSessions.SessionStart(w, r)
-				sess.Set("login", "true")
-				fmt.Fprintf(w, "Hello1! %d \n", cnt)
+				sess.Set("logged-in", true)
+				http.ServeFile(w, r, "chatscreen/chatscreen.html")
 			} else {
-				fmt.Fprintf(w, "Hello2! %d \n", cnt)
+				http.ServeFile(w, r, "login.html")
 			}
 		}
 
@@ -69,4 +62,5 @@ func login(w http.ResponseWriter, r *http.Request) {
 	} else {
 		fmt.Fprintf(w, "BAD METHOD! \n")
 	}
+	return
 }

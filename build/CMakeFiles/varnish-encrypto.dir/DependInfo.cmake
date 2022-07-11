@@ -1,17 +1,14 @@
+
+# Consider dependencies only in project.
+set(CMAKE_DEPENDS_IN_PROJECT_ONLY OFF)
+
 # The set of languages for which implicit dependencies are needed:
 set(CMAKE_DEPENDS_LANGUAGES
-  "CXX"
   )
-# The set of files for implicit dependencies of each language:
-set(CMAKE_DEPENDS_CHECK_CXX
-  "/home/pi/varnish-encrypto/src/client.cpp" "/home/pi/varnish-encrypto/build/CMakeFiles/varnish-encrypto.dir/src/client.cpp.o"
-  )
-set(CMAKE_CXX_COMPILER_ID "GNU")
 
-# The include file search paths:
-set(CMAKE_CXX_TARGET_INCLUDE_PATH
-  "../src"
-  "../lib/include"
+# The set of dependency files which are needed:
+set(CMAKE_DEPENDS_DEPENDENCY_FILES
+  "/Users/zolo/Learning/coding/varnish-encrypto/src/client_apple.cpp" "CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.o" "gcc" "CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.o.d"
   )
 
 # Targets to which this target links.

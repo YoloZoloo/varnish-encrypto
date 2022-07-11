@@ -1,0 +1,99 @@
+ol, ul {
+	list-style: none;
+}
+
+.option {
+  text-decoration: none;
+  cursor: pointer;
+}
+/**
+ * menu
+ */
+ .menu {
+	width: 10%;
+	height: 50px;
+	margin: 0;
+  padding: 0;
+}
+
+.menu > li {
+	float: left;
+	width: 25%;
+	height: 50px;
+	line-height: 50px;
+	background: rgb(29, 33, 19);
+}
+
+.menu > li .link:hover {
+	color: #999;
+  cursor: pointer;
+}
+
+/**
+ * single menu
+ */
+.menu__single .menu__second-level {
+    position: absolute;
+    top: 90px;
+    left : 10px;
+    width: 250px;
+    color: white;
+    background: #000000;
+    overflow: visible;
+    visibility:hidden;
+    opacity: 0; 
+  }
+.menu__second-level a:link {
+   color :white;
+   text-decoration: none;
+}
+.menu__second-level a:visited{
+  color :white;
+  text-decoration: none;
+}
+
+.menu__single:hover > .menu__second-level{
+
+  overflow: visible;
+  visibility: visible;
+  opacity: 1; 
+}
+
+#profileimage{
+  width:100px;
+  height:100px;
+  left :0px;
+  margin:0px;
+  padding: 0px;
+}
+
+
+.addAndExit > .addAndExitOption {
+  float: right;
+  position: relative;
+  top: -40px;
+  right : 25px;
+  width: 50px;
+  background: #ffffff;
+  border: solid 1px #000000;
+  overflow: visible;
+  visibility: hidden;
+  opacity: 0;
+  display: block;
+	color: black;
+
+}
+
+.addAndExit{
+  position:absolute;
+  float: right;
+  right: 0;
+  width :24px;
+  height :24px;
+}
+
+.addAndExit:hover > .addAndExitOption{
+  overflow: visible;
+  visibility: visible;
+  opacity: 1; 
+}

@@ -1,0 +1,75 @@
+<script LANGUAGE = "javascript">
+	var ProfileArray;				
+</script>
+<html>
+<head>
+	<meta charset = "utf-8">
+    <title>Chat</title>
+    <link rel="stylesheet" type="text/css" href="../chatscreen/css/chat_style.css">
+	<link rel="stylesheet" type="text/css" href="../chatscreen/css/dropdownlist.css">
+	<link rel="stylesheet" type="text/css" href="../chatscreen/css/modalwindow.css">
+</head>
+<body onload = "setProfilePicture()">
+	<div id = "header">
+		<input type = "text" placeholder = "Search" id="searchBox">
+	</div>
+	<ul class="createChatroom">
+		<li><a href = "../chatscreen/createChatroom.php">Create Groupchat</a></li>
+	</ul>
+	
+	<!-- <div id="searchBoxWrapper"> -->
+		
+	<!-- </div> -->
+    <div id="leftside">
+		
+		
+		<div id="listBox">
+			<div id="groupListBox">	
+				<h2>Groupchat</h2><br><br>
+			</div>
+
+			<div id="PrivateListBox">
+				<h2>Personal Chat</h2><br><br>
+			</div>
+		</div>
+
+        <div id="icon" onclick="go_to_my_profile()">
+			<img id="profileimage">
+		</div>		
+    </div>
+	
+	<!--チャット表示欄-->
+	<li id = "chat">
+	</li>
+	<!--メッセージ入力欄と「送信」ボタン-->
+	<div id = "bar">
+		<!--メッセージ入力欄-->
+		<div id = "wrappa">
+			<input type = "text" id = "message" value = "">
+		</div>
+		<!--「送信」ボタン-->
+		<button onclick = "sendMessage()">Send</button>
+	</div>
+
+<!-- The Modal -->
+<div id="myModal" class="modal">
+  <!-- Modal content -->
+  <div class="modal-content">
+    <div>
+		<input type = "text" id = "memberId" autocomplete="off" autofocus>
+		<div id = "selectOptions">
+			<p onclick="AddToTextBox(event)"></p>
+			<p onclick="AddToTextBox(event)"></p>
+			<p onclick="AddToTextBox(event)"></p>
+			<p onclick="AddToTextBox(event)"></p>
+			<p onclick="AddToTextBox(event)"></p>
+		</div>
+		<button onclick="AddMember()">Add Member</button>
+	</div>
+  </div>
+</div>
+<script src = "../chatscreen/js/display_onload.js"></script>
+<script src = "../chatscreen/js/chatlogic.js"></script>
+<script src = "../chatscreen/js/modalwindow.js"></script>
+</body>
+</html>

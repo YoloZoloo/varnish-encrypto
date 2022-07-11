@@ -2,10 +2,13 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"regexp"
 
 	"github.com/astaxie/session"
+
 	_ "github.com/astaxie/session"
 	_ "github.com/astaxie/session/providers/memory"
 
@@ -37,11 +40,34 @@ import (
 
 var globalSessions *session.Manager
 
+var rChat = regexp.MustCompile(`^/chatscreen`)
+var rEdit = regexp.MustCompile(`^/edit`)
+
+func showDefaultIcon(w http.ResponseWriter, r *http.Request) {
+	buf, err := ioutil.ReadFile("common/defaultIcon.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+	w.Header().Set("Content-Type", "image/png")
+	w.Write(buf)
+}
+func route(w http.ResponseWriter, r *http.Request) {
+	switch {
+	case rChat.MatchString(r.URL.Path):
+		getchatscreen(w, r)
+	case rEdit.MatchString(r.URL.Path):
+		geteditscreen(w, r)
+	default:
+		http.Error(w, "Method is not supported.", http.StatusNotFound)
+	}
+}
+
 func main() {
 	globalSessions, _ = session.NewManager("memory", "gosessionid", 3600)
 	fmt.Printf("Starting server at port 8081\n")
-	http.HandleFunc("/chatscreen", getchatscreen)
-	http.HandleFunc("/chat/login", login)
+	http.HandleFunc("/login", login)
+	http.HandleFunc("/defaultIcon.png", showDefaultIcon)
+	http.HandleFunc("/", route)
 
 	if err := http.ListenAndServe(":8081", nil); err != nil {
 		log.Fatal(err)
