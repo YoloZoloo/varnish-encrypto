@@ -174,8 +174,6 @@ void *handle_backend(void *Node)
             queue_myself(node);
             printf("thread went into sleep\n");
             pthread_cond_wait(&node->condition_cond, &node->condition_mutex);
-            // node->status = STATUS_READY;
-            // front_sd = node->socket_fd;
         }
         printf("front_sd: %d\n", front_sd);
         pthread_mutex_unlock(&node->condition_mutex);
@@ -222,16 +220,4 @@ void *handle_backend(void *Node)
         node->socket_fd = 0;
         node->status = STATUS_RETURNING;
     }
-}
-
-void *dummy_function(void *Node)
-{
-    // struct my_thread *node = (struct my_thread *)Node;
-    int backend;
-    int front_sd;
-
-    printf("---------------starting thread-------------------\n");
-    printf("initializing SSL context\n");
-    // SSL_CTX *ctx = InitCTX();
-    printf("going into loop\n");
 }

@@ -222,7 +222,6 @@ int read_backend_write_client(SSL *ssl, int client_socket)
             }
             else
             {
-                // read_backend_write_client(ssl, client_socket);
                 printf("Error reason: %d\n", ret);
                 return FAIL;
             }

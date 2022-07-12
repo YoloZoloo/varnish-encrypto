@@ -6,7 +6,7 @@ enable_testing()
 
 set(OPENSSL_ROOT_DIR /usr/include/openssl)
 
-add_executable(varnish-encrypto src/client.cpp)
+add_executable(varnish-encrypto src/encrypto.cpp)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})

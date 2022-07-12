@@ -33,20 +33,11 @@
 pthread_mutex_t socket_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t condition_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t condition_cond = PTHREAD_COND_INITIALIZER;
-// pthread_t thread_pool;
 int count = 0;
 
 struct CLIENT_SOCKET client_socket;
 struct sockaddr_in address;
 socklen_t addrlen;
-
-// backend hostname, port, socket descriptors must be globally visible
-// char *backend_hostname;
-// int backend_port;
-// int client_sd;
-// int backend_sd;
-
-// my_thread_pool *thread_pool = new my_thread_pool();
 
 void set_nonblocking(int fd)
 {
@@ -104,7 +95,6 @@ int main(int argc, char *argv[])
     struct CLIENT_SOCKET client_socket = (struct CLIENT_SOCKET)listen_on_socket(client_port);
     client_sd = client_socket.server_fd;
     printf("client sd: %d\n", client_sd);
-    // set_nonblocking(client_sd);
     address = client_socket.address;
     addrlen = sizeof(address);
 
