@@ -197,7 +197,7 @@ int read_backend_write_client(SSL *ssl, int client_socket)
     {
         // printf("backend-read iterating... \n");
         bytes = SSL_read(ssl, buf, sizeof(buf)); /* get reply & decrypt */
-        // printf("bytes: %d\n", bytes);
+        printf("bytes: %d\n", bytes);
         if (bytes <= 0)
         {
             ret = SSL_get_error(ssl, bytes);
@@ -227,9 +227,10 @@ int read_backend_write_client(SSL *ssl, int client_socket)
                 return FAIL;
             }
         }
+        printf("response: \n %s", buf);
         buf[bytes] = 0;
-        send(client_socket, buf, strlen(buf), 0);
-        // printf("Bytes: \"%d\"\n", bytes);
+        send(client_socket, buf, bytes, 0);
+        // printf("strlen: \"%d\"\n", strlen(buf));
     } while (SSL_pending(ssl) > 0);
     return 1;
 }

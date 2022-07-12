@@ -184,12 +184,10 @@ void *handle_backend(void *Node)
         ssl_connect_status = SSL_connect(ssl);
         if (ssl_connect_status == FAIL) /* perform the connection */
         {
-            SSL_shutdown(ssl);
             SSL_free(ssl);
             close(backend);
             printf("ERROR WHEN ESTABLISHING BACKEND CONNECTION \n\n");
             ERR_print_errors_fp(stderr);
-            exit(0);
         }
         ShowCerts(ssl);
         printf("backend write: %d\n", SSL_write(ssl, client_message, strlen(client_message)));
