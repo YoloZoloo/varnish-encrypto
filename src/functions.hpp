@@ -16,6 +16,8 @@
 #define RECONNECT 0
 #define SUCCESS 1
 
+#define BACKEND_BUFFER 65536
+
 struct SOCKET_INFO
 {
     int backend_port;
@@ -57,7 +59,7 @@ struct CLIENT_SOCKET listen_on_socket(int server_port)
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
-    if (listen(server_fd, 3) < 0)
+    if (listen(server_fd, 10) < 0)
     {
         perror("listen");
         exit(EXIT_FAILURE);
@@ -183,7 +185,6 @@ int backend_write(SSL *ssl, char *client_message)
             return FAIL;
         }
     }
-    // signal(SIGPIPE, SIGPIPE);
     return SUCCESS;
 }
 
@@ -191,7 +192,7 @@ int read_backend_write_client(SSL *ssl, int client_socket)
 {
     int ret;
     int bytes;
-    char buf[1024] = {0};
+    char buf[BACKEND_BUFFER] = {0};
     do
     {
         printf("backend-read iterating... \n");

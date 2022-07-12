@@ -175,9 +175,9 @@ void *handle_backend(void *Node)
             printf("thread went into sleep\n");
             pthread_cond_wait(&node->condition_cond, &node->condition_mutex);
         }
-        printf("front_sd: %d\n", front_sd);
         pthread_mutex_unlock(&node->condition_mutex);
         front_sd = node->socket_fd;
+        printf("front_sd: %d\n", front_sd);
 
         printf("accepted connection to create a read-ready file descriptor\n");
         SSL *ssl = SSL_new(ctx);
@@ -216,7 +216,6 @@ void *handle_backend(void *Node)
         SSL_free(ssl);
         free(client_message);
         close(front_sd);
-        front_sd = 0;
         node->socket_fd = 0;
         node->status = STATUS_RETURNING;
     }
