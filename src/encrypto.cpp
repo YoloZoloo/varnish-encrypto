@@ -23,16 +23,11 @@
 #include <pthread.h>
 #include <fcntl.h>
 
-#define MAX_FD 1024
 #define FAIL -1
 #define RECONNECT 0
 #define SUCCESS 1
 #define MAX_EVENTS 100
-#define THREAD_SLEEP 21
 
-pthread_mutex_t socket_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t condition_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t condition_cond = PTHREAD_COND_INITIALIZER;
 int count = 0;
 
 struct CLIENT_SOCKET client_socket;
@@ -94,7 +89,6 @@ int main(int argc, char *argv[])
 
     struct CLIENT_SOCKET client_socket = (struct CLIENT_SOCKET)listen_on_socket(client_port);
     client_sd = client_socket.server_fd;
-    // printf("client sd: %d\n", client_sd);
     address = client_socket.address;
     addrlen = sizeof(address);
 

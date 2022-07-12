@@ -1,1 +1,0 @@
-/usr/bin/aarch64-linux-gnu-gcc -g -rdynamic CMakeFiles/varnish-ecnrypto.dir/client.c.o -o varnish-ecnrypto 

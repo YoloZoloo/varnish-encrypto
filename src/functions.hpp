@@ -142,7 +142,6 @@ void ShowCerts(SSL *ssl)
 
 char *read_from_client(int socket_front)
 {
-    // printf("reading from the client side\n");
     char *client_buffer = (char *)calloc(1024, sizeof(char));
     int value_read;
 
@@ -227,10 +226,8 @@ int read_backend_write_client(SSL *ssl, int client_socket)
                 return FAIL;
             }
         }
-        printf("response: \n %s", buf);
         buf[bytes] = 0;
         send(client_socket, buf, bytes, 0);
-        // printf("strlen: \"%d\"\n", strlen(buf));
     } while (SSL_pending(ssl) > 0);
     return 1;
 }
