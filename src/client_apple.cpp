@@ -70,7 +70,7 @@ void *accept_connection(void *)
         if (n == 0)
         {
             close(new_socket_fd);
-            printf("closed the client socket due to empty thread pool");
+            printf("closed the client socket due to empty thread pool\n");
         }
     }
 }
@@ -107,6 +107,8 @@ int main(int argc, char *argv[])
     // set_nonblocking(client_sd);
     address = client_socket.address;
     addrlen = sizeof(address);
+
+    thread_pool->populate_thread_pool();
 
     pthread_t acceptor_thread = (pthread_t)THREAD_NUMBER + 1;
     pthread_create(&acceptor_thread, NULL, accept_connection, NULL);

@@ -15,8 +15,12 @@
 #define SUCCESS 1
 #define THREAD_NUMBER 100
 
+#define STATUS_RETURNING -99
+#define STATUS_READY -100
+#define STATUS_SLEEPING -101
+
 int thread_id;
-pthread_mutex_t queue_lock;
+pthread_mutex_t queue_lock = PTHREAD_MUTEX_INITIALIZER;
 char *backend_hostname;
 int backend_port;
 int client_sd;
@@ -31,9 +35,11 @@ struct my_thread
     my_thread *next_thread;
     pthread_t thread;
     int socket_fd;
+    int status;
 };
 void queue_myself(struct my_thread *node);
 void *handle_backend(void *Node);
+void *dummy_function(void *Node);
 
 class my_thread_pool
 {
@@ -44,14 +50,13 @@ class my_thread_pool
 public:
     struct my_thread *head = NULL;
     struct my_thread *tail = NULL;
-    void spawn_thread();
+    void populate_thread_pool();
     void push(struct my_thread **head, struct my_thread **tail);
     int dequeue_worker(int sockfd);
     void delete_thread();
-    // void queue_myself(struct my_thread *node);
 };
 
-void my_thread_pool::spawn_thread()
+void my_thread_pool::populate_thread_pool()
 {
     for (int i = 0; i < THREAD_NUMBER; i++)
     {
@@ -61,21 +66,29 @@ void my_thread_pool::spawn_thread()
 // insert a new node in front of the list
 void my_thread_pool::push(struct my_thread **head, struct my_thread **tail)
 {
-    struct my_thread *newNode = (struct my_thread *)malloc(sizeof(struct my_thread));
+    struct my_thread *newNode = (struct my_thread *)malloc(
+        sizeof(pthread_mutex_t) + sizeof(pthread_cond_t) +
+        sizeof(struct my_thread) + sizeof(pthread_t) + sizeof(int));
 
     /* Put in the data  */
     pthread_mutex_init(&(newNode->condition_mutex), NULL);
     pthread_cond_init(&(newNode->condition_cond), NULL);
+    newNode->socket_fd = 0;
+    newNode->status = STATUS_SLEEPING;
     pthread_create(&(newNode->thread), NULL, handle_backend, (void *)(newNode));
 
-    /* Link the last node to the new node */
-    (*tail)->next_thread = newNode;
-    /* Make the new node as the last node */
+    // /* Link the last node to the new node */
+    if (*tail != NULL)
+    {
+        (*tail)->next_thread = newNode;
+    }
+    // /* Make the new node as the last node */
     *tail = newNode;
     newNode->next_thread = NULL;
-    if (head == NULL)
+    if (*head == NULL)
     {
         /* Move the head to point to the new node */
+        printf("head is set to newNode\n");
         (*head) = newNode;
     }
 }
@@ -84,12 +97,13 @@ and assign task to it.
 */
 int my_thread_pool::dequeue_worker(int sockfd)
 {
-    printf("here");
+    printf("dequeueing the worker thread\n");
     if (head == NULL)
     {
         return 0;
     }
     head->socket_fd = sockfd;
+    head->status = STATUS_READY;
     pthread_cond_signal(&head->condition_cond);
     head = head->next_thread;
     return 1;
@@ -103,7 +117,15 @@ void my_thread_pool::delete_thread()
 my_thread_pool *thread_pool = new my_thread_pool;
 void queue_myself(struct my_thread *node)
 {
-    node->next_thread = thread_pool->head->next_thread;
+    printf("queueing itself to the thread pool\n");
+    if (thread_pool->head == NULL)
+    {
+        node->next_thread = NULL;
+    }
+    else
+    {
+        node->next_thread = thread_pool->head->next_thread;
+    }
     thread_pool->head = node;
 }
 
@@ -112,33 +134,52 @@ void *handle_backend(void *Node)
     struct my_thread *node = (struct my_thread *)Node;
     int backend;
     int front_sd;
+    int mutex_unlock;
 
     printf("---------------starting thread-------------------\n");
+    printf("initializing SSL context\n");
     SSL_CTX *ctx = InitCTX();
-
+    printf("going into loop\n");
     int ssl_connect_status;
-
     for (;;)
     {
         printf("here %d\n", pthread_self());
         pthread_mutex_lock(&node->condition_mutex);
-        while (thread_id == 0)
+        printf("socket_fd: %d\n", node->socket_fd);
+        while (node->status == STATUS_SLEEPING || node->status == STATUS_RETURNING)
         {
             printf("trying to lock mutex\n");
-            while (pthread_mutex_trylock(&queue_lock) != 0)
+            while (node->status == STATUS_RETURNING)
             {
-                // sleep for 300ms
-                sleep(3);
+                if (pthread_mutex_trylock(&queue_lock) != 0)
+                {
+                    // sleep for 300ms
+                    printf("trying to lock the mutex\n");
+                    sleep(3);
+                }
+                else
+                {
+                    node->status = STATUS_SLEEPING;
+                }
+            }
+            mutex_unlock = pthread_mutex_unlock(&queue_lock);
+            if (mutex_unlock == 0)
+            {
+                printf("queue mutex unlocked\n");
+            }
+            else
+            {
+                printf("queue mutex unlock failed: %d\n", mutex_unlock);
             }
             queue_myself(node);
-            pthread_mutex_unlock(&queue_lock);
-            printf("thread went into sleep");
+            printf("thread went into sleep\n");
             pthread_cond_wait(&node->condition_cond, &node->condition_mutex);
-            front_sd = node->socket_fd;
+            // node->status = STATUS_READY;
+            // front_sd = node->socket_fd;
         }
         printf("front_sd: %d\n", front_sd);
         pthread_mutex_unlock(&node->condition_mutex);
-        // front_sd = node->socket_fd;
+        front_sd = node->socket_fd;
 
         printf("accepted connection to create a read-ready file descriptor\n");
         SSL *ssl = SSL_new(ctx);
@@ -179,5 +220,18 @@ void *handle_backend(void *Node)
         close(front_sd);
         front_sd = 0;
         node->socket_fd = 0;
+        node->status = STATUS_RETURNING;
     }
+}
+
+void *dummy_function(void *Node)
+{
+    // struct my_thread *node = (struct my_thread *)Node;
+    int backend;
+    int front_sd;
+
+    printf("---------------starting thread-------------------\n");
+    printf("initializing SSL context\n");
+    // SSL_CTX *ctx = InitCTX();
+    printf("going into loop\n");
 }

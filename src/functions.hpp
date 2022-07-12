@@ -142,9 +142,9 @@ char *read_from_client(int socket_front)
 {
     printf("reading from the client side\n");
     char *client_buffer = (char *)calloc(1024, sizeof(char));
-    int valread;
+    int value_read;
 
-    valread = read(socket_front, client_buffer, 1024); /* get reply & decrypt */
+    value_read = read(socket_front, client_buffer, 1024); /* get reply & decrypt */
     return client_buffer;
 }
 
