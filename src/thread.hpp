@@ -88,7 +88,7 @@ void my_thread_pool::push(struct my_thread **head, struct my_thread **tail)
     if (*head == NULL)
     {
         /* Move the head to point to the new node */
-        printf("head is set to newNode\n");
+        // printf("head is set to newNode\n");
         (*head) = newNode;
     }
 }
@@ -97,7 +97,7 @@ and assign task to it.
 */
 int my_thread_pool::dequeue_worker(int sockfd)
 {
-    printf("dequeueing the worker thread\n");
+    // printf("dequeueing the worker thread\n");
     if (head == NULL)
     {
         return 0;
@@ -117,7 +117,7 @@ void my_thread_pool::delete_thread()
 my_thread_pool *thread_pool = new my_thread_pool;
 void queue_myself(struct my_thread *node)
 {
-    printf("queueing itself to the thread pool\n");
+    // printf("queueing itself to the thread pool\n");
     if (thread_pool->head == NULL)
     {
         node->next_thread = NULL;
@@ -137,24 +137,18 @@ void *handle_backend(void *Node)
     int mutex_unlock;
 
     printf("---------------starting thread-------------------\n");
-    printf("initializing SSL context\n");
     SSL_CTX *ctx = InitCTX();
-    printf("going into loop\n");
     int ssl_connect_status;
     for (;;)
     {
-        printf("here %d\n", pthread_self());
         pthread_mutex_lock(&node->condition_mutex);
-        printf("socket_fd: %d\n", node->socket_fd);
         while (node->status == STATUS_SLEEPING || node->status == STATUS_RETURNING)
         {
-            printf("trying to lock mutex\n");
             while (node->status == STATUS_RETURNING)
             {
                 if (pthread_mutex_trylock(&queue_lock) != 0)
                 {
                     // sleep for 300ms
-                    printf("trying to lock the mutex\n");
                     sleep(3);
                 }
                 else
@@ -172,21 +166,21 @@ void *handle_backend(void *Node)
                 printf("queue mutex unlock failed: %d\n", mutex_unlock);
             }
             queue_myself(node);
-            printf("thread went into sleep\n");
+            // printf("thread went into sleep\n");
             pthread_cond_wait(&node->condition_cond, &node->condition_mutex);
         }
         pthread_mutex_unlock(&node->condition_mutex);
         front_sd = node->socket_fd;
-        printf("front_sd: %d\n", front_sd);
+        // printf("front_sd: %d\n", front_sd);
 
-        printf("accepted connection to create a read-ready file descriptor\n");
+        // printf("accepted connection to create a read-ready file descriptor\n");
         SSL *ssl = SSL_new(ctx);
         backend_sd = create_be_socket(backend_hostname, backend_port, backend_address);
         backend = OpenConnection(backend_sd, backend_address, backend_hostname);
         SSL_set_fd(ssl, backend);
         // accepted socket is ready for reading
         char *client_message = read_from_client(front_sd);
-        printf("%s\n", client_message);
+        // printf("%s\n", client_message);
         ssl_connect_status = SSL_connect(ssl);
         if (ssl_connect_status == FAIL) /* perform the connection */
         {
@@ -204,12 +198,7 @@ void *handle_backend(void *Node)
             if (read_backend_write_client(ssl, front_sd) == FAIL)
             {
                 close(backend);
-                SSL_shutdown(ssl);
-                SSL_free(ssl);
-                free(client_message);
-                close(front_sd);
                 printf("Error during reading from the back end\n");
-                exit(0);
             }
         }
         SSL_shutdown(ssl);

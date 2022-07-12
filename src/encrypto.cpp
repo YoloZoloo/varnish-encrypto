@@ -56,7 +56,7 @@ void *accept_connection(void *)
     while (1)
     {
         new_socket_fd = accept(client_sd, (struct sockaddr *)&address, (socklen_t *)&addrlen);
-        printf("new_socket_fd: %d\n", new_socket_fd);
+        // printf("new_socket_fd: %d\n", new_socket_fd);
         n = thread_pool->dequeue_worker(new_socket_fd);
         if (n == 0)
         {
@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
 
     struct CLIENT_SOCKET client_socket = (struct CLIENT_SOCKET)listen_on_socket(client_port);
     client_sd = client_socket.server_fd;
-    printf("client sd: %d\n", client_sd);
+    // printf("client sd: %d\n", client_sd);
     address = client_socket.address;
     addrlen = sizeof(address);
 

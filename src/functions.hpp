@@ -15,7 +15,7 @@
 #define FAIL -1
 #define RECONNECT 0
 #define SUCCESS 1
-
+#define CLIENT_SOCKET_BACKLOG 100
 #define BACKEND_BUFFER 65536
 
 struct SOCKET_INFO
@@ -59,7 +59,7 @@ struct CLIENT_SOCKET listen_on_socket(int server_port)
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
-    if (listen(server_fd, 10) < 0)
+    if (listen(server_fd, CLIENT_SOCKET_BACKLOG) < 0)
     {
         perror("listen");
         exit(EXIT_FAILURE);
@@ -93,7 +93,7 @@ int create_be_socket(const char *hostname, int port, struct sockaddr_in addr)
 
 int OpenConnection(int sd, struct sockaddr_in addr, char *hostname)
 {
-    printf("trying backend connection\n");
+    // printf("trying backend connection\n");
     if (connect(sd, (struct sockaddr *)&addr, sizeof(addr)) != 0)
     {
         printf("closing backend connection due to error");
@@ -127,12 +127,12 @@ void ShowCerts(SSL *ssl)
     cert = SSL_get_peer_certificate(ssl); /* get the server's certificate */
     if (cert != NULL)
     {
-        printf("Server certificates:\n");
+        // printf("Server certificates:\n");
         line = X509_NAME_oneline(X509_get_subject_name(cert), 0, 0);
-        printf("Subject: %s\n", line);
+        // printf("Subject: %s\n", line);
         free(line); /* free the malloc'ed string */
         line = X509_NAME_oneline(X509_get_issuer_name(cert), 0, 0);
-        printf("Issuer: %s\n", line);
+        // printf("Issuer: %s\n", line);
         free(line);      /* free the malloc'ed string */
         X509_free(cert); /* free the malloc'ed certificate copy */
     }
@@ -142,7 +142,7 @@ void ShowCerts(SSL *ssl)
 
 char *read_from_client(int socket_front)
 {
-    printf("reading from the client side\n");
+    // printf("reading from the client side\n");
     char *client_buffer = (char *)calloc(1024, sizeof(char));
     int value_read;
 
@@ -195,9 +195,9 @@ int read_backend_write_client(SSL *ssl, int client_socket)
     char buf[BACKEND_BUFFER] = {0};
     do
     {
-        printf("backend-read iterating... \n");
+        // printf("backend-read iterating... \n");
         bytes = SSL_read(ssl, buf, sizeof(buf)); /* get reply & decrypt */
-        printf("bytes: %d\n", bytes);
+        // printf("bytes: %d\n", bytes);
         if (bytes <= 0)
         {
             ret = SSL_get_error(ssl, bytes);
@@ -229,7 +229,7 @@ int read_backend_write_client(SSL *ssl, int client_socket)
         }
         buf[bytes] = 0;
         send(client_socket, buf, strlen(buf), 0);
-        printf("Bytes: \"%d\"\n", bytes);
+        // printf("Bytes: \"%d\"\n", bytes);
     } while (SSL_pending(ssl) > 0);
     return 1;
 }
