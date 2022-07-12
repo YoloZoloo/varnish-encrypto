@@ -8,7 +8,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
-  "/Users/zolo/Learning/coding/varnish-encrypto/src/client_apple.cpp" "CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.o" "gcc" "CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.o.d"
+  "/Users/zolo/Learning/coding/varnish-encrypto/src/client.cpp" "CMakeFiles/varnish-encrypto.dir/src/client.cpp.o" "gcc" "CMakeFiles/varnish-encrypto.dir/src/client.cpp.o.d"
   )
 
 # Targets to which this target links.

@@ -523,29 +523,29 @@ varnish-encrypto/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/varnish-encrypto.dir/build.make CMakeFiles/varnish-encrypto.dir/build
 .PHONY : varnish-encrypto/fast
 
-src/client_apple.o: src/client_apple.cpp.o
-.PHONY : src/client_apple.o
+src/client.o: src/client.cpp.o
+.PHONY : src/client.o
 
 # target to build an object file
-src/client_apple.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/varnish-encrypto.dir/build.make CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.o
-.PHONY : src/client_apple.cpp.o
+src/client.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/varnish-encrypto.dir/build.make CMakeFiles/varnish-encrypto.dir/src/client.cpp.o
+.PHONY : src/client.cpp.o
 
-src/client_apple.i: src/client_apple.cpp.i
-.PHONY : src/client_apple.i
+src/client.i: src/client.cpp.i
+.PHONY : src/client.i
 
 # target to preprocess a source file
-src/client_apple.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/varnish-encrypto.dir/build.make CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.i
-.PHONY : src/client_apple.cpp.i
+src/client.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/varnish-encrypto.dir/build.make CMakeFiles/varnish-encrypto.dir/src/client.cpp.i
+.PHONY : src/client.cpp.i
 
-src/client_apple.s: src/client_apple.cpp.s
-.PHONY : src/client_apple.s
+src/client.s: src/client.cpp.s
+.PHONY : src/client.s
 
 # target to generate assembly for a file
-src/client_apple.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/varnish-encrypto.dir/build.make CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.s
-.PHONY : src/client_apple.cpp.s
+src/client.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/varnish-encrypto.dir/build.make CMakeFiles/varnish-encrypto.dir/src/client.cpp.s
+.PHONY : src/client.cpp.s
 
 # Help Target
 help:
@@ -587,9 +587,9 @@ help:
 	@echo "... NightlyTest"
 	@echo "... NightlyUpdate"
 	@echo "... varnish-encrypto"
-	@echo "... src/client_apple.o"
-	@echo "... src/client_apple.i"
-	@echo "... src/client_apple.s"
+	@echo "... src/client.o"
+	@echo "... src/client.i"
+	@echo "... src/client.s"
 .PHONY : help
 
 

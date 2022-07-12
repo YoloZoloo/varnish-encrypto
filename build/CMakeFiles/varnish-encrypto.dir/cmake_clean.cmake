@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.o"
-  "CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.o.d"
+  "CMakeFiles/varnish-encrypto.dir/src/client.cpp.o"
+  "CMakeFiles/varnish-encrypto.dir/src/client.cpp.o.d"
   "varnish-encrypto"
   "varnish-encrypto.pdb"
 )

@@ -69,28 +69,28 @@ include CMakeFiles/varnish-encrypto.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/varnish-encrypto.dir/flags.make
 
-CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.o: CMakeFiles/varnish-encrypto.dir/flags.make
-CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.o: ../src/client_apple.cpp
-CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.o: CMakeFiles/varnish-encrypto.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/Users/zolo/Learning/coding/varnish-encrypto/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.o"
-	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.o -MF CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.o.d -o CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.o -c /Users/zolo/Learning/coding/varnish-encrypto/src/client_apple.cpp
+CMakeFiles/varnish-encrypto.dir/src/client.cpp.o: CMakeFiles/varnish-encrypto.dir/flags.make
+CMakeFiles/varnish-encrypto.dir/src/client.cpp.o: ../src/client.cpp
+CMakeFiles/varnish-encrypto.dir/src/client.cpp.o: CMakeFiles/varnish-encrypto.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/Users/zolo/Learning/coding/varnish-encrypto/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/varnish-encrypto.dir/src/client.cpp.o"
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/varnish-encrypto.dir/src/client.cpp.o -MF CMakeFiles/varnish-encrypto.dir/src/client.cpp.o.d -o CMakeFiles/varnish-encrypto.dir/src/client.cpp.o -c /Users/zolo/Learning/coding/varnish-encrypto/src/client.cpp
 
-CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.i"
-	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/zolo/Learning/coding/varnish-encrypto/src/client_apple.cpp > CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.i
+CMakeFiles/varnish-encrypto.dir/src/client.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/varnish-encrypto.dir/src/client.cpp.i"
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/zolo/Learning/coding/varnish-encrypto/src/client.cpp > CMakeFiles/varnish-encrypto.dir/src/client.cpp.i
 
-CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.s"
-	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/zolo/Learning/coding/varnish-encrypto/src/client_apple.cpp -o CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.s
+CMakeFiles/varnish-encrypto.dir/src/client.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/varnish-encrypto.dir/src/client.cpp.s"
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/zolo/Learning/coding/varnish-encrypto/src/client.cpp -o CMakeFiles/varnish-encrypto.dir/src/client.cpp.s
 
 # Object files for target varnish-encrypto
 varnish__encrypto_OBJECTS = \
-"CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.o"
+"CMakeFiles/varnish-encrypto.dir/src/client.cpp.o"
 
 # External object files for target varnish-encrypto
 varnish__encrypto_EXTERNAL_OBJECTS =
 
-varnish-encrypto: CMakeFiles/varnish-encrypto.dir/src/client_apple.cpp.o
+varnish-encrypto: CMakeFiles/varnish-encrypto.dir/src/client.cpp.o
 varnish-encrypto: CMakeFiles/varnish-encrypto.dir/build.make
 varnish-encrypto: CMakeFiles/varnish-encrypto.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/Users/zolo/Learning/coding/varnish-encrypto/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable varnish-encrypto"
