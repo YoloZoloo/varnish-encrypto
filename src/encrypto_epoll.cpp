@@ -132,8 +132,8 @@ void *handle_backend(void *)
 
         printf("accepted connection to create a read-ready file descriptor\n");
         SSL *ssl = SSL_new(ctx);
-        backend_sd = create_be_socket(backend_hostname, backend_port, backend_address);
-        backend = OpenConnection(backend_sd, backend_address, backend_hostname);
+        backend = Create_Backend_Connection(backend_port, backend_address, backend_hostname);
+        // backend = OpenConnection(backend_sd, backend_address, backend_hostname);
         SSL_set_fd(ssl, backend);
         // accepted socket is ready for reading
         char *client_message = read_from_client(front_sd);

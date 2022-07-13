@@ -18,6 +18,14 @@
 #define CLIENT_SOCKET_BACKLOG 100
 #define BACKEND_BUFFER 65536
 
+//backend host
+struct hostent *host;
+
+//EPOLL
+#define MAX_EVENTS 10
+struct epoll_event ev, events[MAX_EVENTS];
+int epollfd = epoll_create(1);
+
 struct SOCKET_INFO
 {
     int backend_port;
@@ -74,20 +82,36 @@ struct BACKEND_SOCKET
     struct sockaddr_in address;
 };
 
-int create_be_socket(const char *hostname, int port, struct sockaddr_in addr)
-{
-    int sd;
-    struct hostent *host;
+void set_host(const char *hostname){
     if ((host = gethostbyname(hostname)) == NULL)
     {
         perror(hostname);
         abort();
     }
-    sd = socket(PF_INET, SOCK_STREAM, 0);
-    // bzero(&addr, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = *(long *)(host->h_addr);
+}
+
+int Create_Backend_Connection(int port, struct sockaddr_in addr, char* hostname)
+{
+    int sd;
+    int retry_count = 5;
+
+    for (int i=0; i<retry_count; i++) {
+        sd = socket(PF_INET, SOCK_STREAM, 0);
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(port);
+        addr.sin_addr.s_addr = *(long *)(host->h_addr);
+        if (sd == -1)
+        {
+            continue;
+        }
+
+        if (connect(sd, (struct sockaddr *)&addr, sizeof(addr)) != -1)
+        {
+            break;     
+        }             /* Success */
+
+        close(sd);
+    }
     return sd;
 }
 
@@ -110,7 +134,7 @@ SSL_CTX *InitCTX(void)
     SSL_CTX *ctx;
     OpenSSL_add_all_algorithms();     /* Load cryptos, et.al. */
     SSL_load_error_strings();         /* Bring in and register error messages */
-    method = TLS_client_method(); /* Create new client-method instance */
+    method = TLSv1_2_client_method(); /* Create new client-method instance */
     ctx = SSL_CTX_new(method);        /* Create new context */
     if (ctx == NULL)
     {
@@ -143,9 +167,20 @@ void ShowCerts(SSL *ssl)
 char *read_from_client(int socket_front)
 {
     char *client_buffer = (char *)calloc(1024, sizeof(char));
-    int value_read;
+    char *null_pointer = NULL;
+    int read_from_client;
 
-    value_read = read(socket_front, client_buffer, 1024); /* get reply & decrypt */
+    read_from_client = read(socket_front, client_buffer, 1024); /* get reply & decrypt */
+    printf("%d fd - read_from_client: %d\n", socket_front, read_from_client);
+    if(read_from_client == FAIL)
+    {
+       printf("%d fd - failed reading from client\n", socket_front);
+       return null_pointer;
+    }
+    else if(read_from_client == 0){
+        printf("%d fd - empty request\n", socket_front);
+        return null_pointer;
+    }
     return client_buffer;
 }
 
@@ -196,7 +231,7 @@ int read_backend_write_client(SSL *ssl, int client_socket)
     {
         // printf("backend-read iterating... \n");
         bytes = SSL_read(ssl, buf, sizeof(buf)); /* get reply & decrypt */
-        printf("bytes: %d\n", bytes);
+        printf("%d fd - backend read bytes: %d\n", client_socket, bytes);
         if (bytes <= 0)
         {
             ret = SSL_get_error(ssl, bytes);
@@ -219,6 +254,10 @@ int read_backend_write_client(SSL *ssl, int client_socket)
             {
                 printf("SSL_ERROR_WANT_X509_LOOKUP\n");
                 return 0;
+            }
+            else if (ret == SSL_ERROR_WANT_X509_LOOKUP)
+            {
+
             }
             else
             {
