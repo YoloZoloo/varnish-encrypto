@@ -13,7 +13,7 @@
 #define FAIL -1
 #define RECONNECT 0
 #define SUCCESS 1
-#define THREAD_NUMBER 3
+#define THREAD_NUMBER 100
 
 #define STATUS_RETURNING -99
 #define STATUS_READY -100
@@ -205,8 +205,6 @@ void *handle_backend(void *Node)
             }
             shutdown(backend, 2);
             close(backend);
-            shutdown(backend_sd, 2);
-            close(backend_sd);
             SSL_shutdown(ssl);
             SSL_free(ssl);
         }
@@ -216,7 +214,19 @@ void *handle_backend(void *Node)
         printf("%d - FILE DESCRIPTOR CLOSE STATUS: %d\n", node->node_no, close_client_fd);
         if(close_client_fd < 0){
             printf("%d - FILE DESCRIPTOR not closed\n", node->node_no);
-        }
+            if(errno == EBADF)
+            {
+                printf("invalid file descriptor\n");
+            }
+            else if(errno == EINTR)
+            {
+                printf("The close() call was interrupted by a signal\n");
+            }
+            else if(errno == EIO)
+            {
+                printf("IO error \n");
+            }
+      }
         node->socket_fd = 0;
         node->status = STATUS_RETURNING;
     }
