@@ -107,7 +107,7 @@ int Create_Backend_Connection(int port, struct sockaddr_in addr, char* hostname)
 
         if (connect(sd, (struct sockaddr *)&addr, sizeof(addr)) != -1)
         {
-            break;     
+            break;
         }             /* Success */
 
         close(sd);
@@ -115,18 +115,6 @@ int Create_Backend_Connection(int port, struct sockaddr_in addr, char* hostname)
     return sd;
 }
 
-int OpenConnection(int sd, struct sockaddr_in addr, char *hostname)
-{
-    // printf("trying backend connection\n");
-    if (connect(sd, (struct sockaddr *)&addr, sizeof(addr)) != 0)
-    {
-        printf("closing backend connection due to error");
-        close(sd);
-        perror(hostname);
-        abort();
-    }
-    return sd;
-}
 // Load crypto
 SSL_CTX *InitCTX(void)
 {
@@ -171,7 +159,6 @@ char *read_from_client(int socket_front)
     int read_from_client;
 
     read_from_client = read(socket_front, client_buffer, 1024); /* get reply & decrypt */
-    printf("%d fd - read_from_client: %d\n", socket_front, read_from_client);
     if(read_from_client == FAIL)
     {
        printf("%d fd - failed reading from client\n", socket_front);

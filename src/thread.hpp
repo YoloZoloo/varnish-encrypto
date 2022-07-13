@@ -77,7 +77,6 @@ void my_thread_pool::push(struct my_thread **head, struct my_thread **tail, int 
     newNode->socket_fd = 0;
     newNode->status = STATUS_SLEEPING;
     newNode->node_no = node_number;
-    printf("node number: %d\n", newNode->node_no);
     pthread_create(&(newNode->thread), NULL, handle_backend, (void *)(newNode));
 
     // /* Link the last node to the new node */
@@ -91,7 +90,6 @@ void my_thread_pool::push(struct my_thread **head, struct my_thread **tail, int 
     if (*head == NULL)
     {
         /* Move the head to point to the new node */
-        // printf("head is set to newNode\n");
         (*head) = newNode;
     }
 }
@@ -100,7 +98,6 @@ and assign task to it.
 */
 int my_thread_pool::dequeue_worker(int sockfd)
 {
-    printf("looking for a worker thread\n");
     if (head == NULL)
     {
         return 0;
@@ -160,11 +157,7 @@ void *handle_backend(void *Node)
                 }
             }
             mutex_lock = pthread_mutex_unlock(&queue_lock);
-            if (mutex_lock == 0)
-            {
-                printf("%d - queue mutex unlocked\n", node->node_no);
-            }
-            else
+            if (mutex_lock != 0)
             {
                 printf("%d - queue mutex unlock failed: %d\n",node->node_no, mutex_lock);
             }
@@ -184,18 +177,15 @@ void *handle_backend(void *Node)
             printf("%d - Error on the client side\n", node->node_no);
         }
         else{
-            printf("%d - client request: \n %s", node->node_no, client_message);
             SSL *ssl = SSL_new(ctx);
             backend = Create_Backend_Connection(backend_port, backend_address, backend_hostname);
-            printf("%d - backend: %d\n", node->node_no, backend);
             SSL_set_fd(ssl, backend);
             ssl_connect_status = SSL_connect(ssl);
             if (ssl_connect_status == FAIL) /* perform the connection */
             {
                 printf("%d - ERROR WHEN ESTABLISHING BACKEND CONNECTION \n\n",node->node_no);
             }
-            //ShowCerts(ssl);
-            printf("%d - backend write: %d\n", front_sd,SSL_write(ssl, client_message, strlen(client_message)));
+            front_sd,SSL_write(ssl, client_message, strlen(client_message));
             if (read_backend_write_client(ssl, front_sd) == FAIL)
             {
                 if (read_backend_write_client(ssl, front_sd) == FAIL)
@@ -211,7 +201,6 @@ void *handle_backend(void *Node)
         free(client_message);
         shutdown(front_sd, 2);
         close_client_fd = close(front_sd);
-        printf("%d - FILE DESCRIPTOR CLOSE STATUS: %d\n", node->node_no, close_client_fd);
         if(close_client_fd < 0){
             printf("%d - FILE DESCRIPTOR not closed\n", node->node_no);
             if(errno == EBADF)
