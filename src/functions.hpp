@@ -156,12 +156,16 @@ char *read_from_client(int socket_front)
     read_from_client = read(socket_front, client_buffer, 1024); /* get reply & decrypt */
     if(read_from_client == FAIL)
     {
+#ifdef DEBUG
        printf("%d fd - failed reading from client\n", socket_front);
+#endif
        free(client_buffer);
        return null_pointer;
     }
     else if(read_from_client == 0){
+#ifdef DEBUG
         printf("%d fd - empty request\n", socket_front);
+#endif
         free(client_buffer);
         return null_pointer;
     }
@@ -216,7 +220,9 @@ int read_backend_write_client(SSL *ssl, int client_socket)
     {
         // printf("backend-read iterating... \n");
         bytes = SSL_read(ssl, buf, sizeof(buf)); /* get reply & decrypt */
+#ifdef DEBUG
         printf("%d fd - backend read bytes: %d\n", client_socket, bytes);
+#endif
         if (bytes <= 0)
         {
             ret = SSL_get_error(ssl, bytes);
