@@ -13,7 +13,7 @@
 #define FAIL -1
 #define RECONNECT 0
 #define SUCCESS 1
-#define THREAD_NUMBER 100
+#define THREAD_NUMBER 300
 
 #define STATUS_RETURNING -99
 #define STATUS_READY -100
@@ -66,7 +66,9 @@ void my_thread_pool::populate_thread_pool()
         my_thread_pool::push(&head, &tail, i);
     }
     if(tail->next_thread == NULL){
+#ifdef DEBUG
         printf("next thread of tail is NULL\n");
+#endif
     }
 }
 // insert a new node in front of the list
@@ -83,7 +85,6 @@ void my_thread_pool::push(struct my_thread **head, struct my_thread **tail, int 
     newNode->status = STATUS_INITIAL;
     newNode->node_no = node_number;
     pthread_create(&(newNode->thread), NULL, handle_backend, (void *)(newNode));
-
     // // /* Link the last node to the new node */
     if (*tail != NULL)
     {
@@ -112,9 +113,13 @@ int my_thread_pool::dequeue_worker(int sockfd)
     temp->socket_fd = sockfd;
     temp->status = STATUS_READY;
     pthread_cond_signal(&temp->condition_cond);
+#ifdef DEBUG
     printf("%d - dequeueing \n", temp->node_no);
+#endif
     head = head->next_thread;
+#ifdef DEBUG
     printf("%d - thread pool head shifted to this\n", head->node_no);
+#endif
     return 1;
 }
 void my_thread_pool::delete_thread()
@@ -126,10 +131,14 @@ void my_thread_pool::delete_thread()
 void my_thread_pool::check_integrity()
 {
     temp = head;
-    printf("checking integrity\n");
+#ifdef DEBUG
+    printf("checking integrity");
+#endif
     while(temp != tail)
     {
+#ifdef DEBUG
         printf("%d\n", temp->node_no);
+#endif
         temp = temp->next_thread;
     }
 }
@@ -154,22 +163,35 @@ void queue_myself(struct my_thread *node)
 
 void *handle_backend(void *Node)
 {
+    int detach_status;
+    detach_status = pthread_detach(pthread_self());
+    if(detach_status != 0 )
+    {
+#ifdef DEBUG
+        printf("thread is not detached");
+#endif
+    }
     struct my_thread *node = (struct my_thread *)Node;
     int backend;
     int front_sd;
     int mutex_lock;
     int close_client_fd;
-
+#ifdef DEBUG
     printf("---------------starting thread------------------ %d\n", node->node_no);
+#endif
     SSL_CTX *ctx = InitCTX();
     int ssl_connect_status;
     while(node->status == STATUS_INITIAL){
         pthread_mutex_lock(&node->condition_mutex);
+#ifdef DEBUG
         printf("%d - first hibernation\n", node->node_no);
+#endif
         pthread_cond_wait(&node->condition_cond, &node->condition_mutex);
         pthread_mutex_unlock(&node->condition_mutex);
     }
+#ifdef DEBUG
     printf("%d - came out of hibernation\n", node->node_no);
+#endif
     for (;;)
     {
         pthread_mutex_lock(&node->condition_mutex);
@@ -190,22 +212,33 @@ void *handle_backend(void *Node)
             mutex_lock = pthread_mutex_unlock(&queue_lock);
             if (mutex_lock != 0)
             {
+#ifdef DEBUG
                 printf("%d - queue mutex unlock failed: %d\n",node->node_no, mutex_lock);
+#endif
             }
+#ifdef DEBUG
             printf("%d thread - about to queue this thread back to thread pool\n", node->node_no);
+#endif
             queue_myself(node);
+#ifdef DEBUG
             printf("%d - thread going into sleep\n", node->node_no);
+#endif
             pthread_cond_wait(&node->condition_cond, &node->condition_mutex);
+#ifdef DEBUG
             printf("%d - thread woke up to task\n", node->node_no);
+#endif
         }
         pthread_mutex_unlock(&node->condition_mutex);
         front_sd = node->socket_fd;
+#ifdef DEBUG
         printf("%d thread is handling connection descriptor %d\n", node->node_no, front_sd);
-
+#endif
         // accepted socket is ready for reading
         char *client_message = read_from_client(front_sd);
         if(client_message == NULL){
+#ifdef DEBU
             printf("%d - Error on the client side\n", node->node_no);
+#endif
         }
         else{
             SSL *ssl = SSL_new(ctx);
@@ -214,14 +247,18 @@ void *handle_backend(void *Node)
             ssl_connect_status = SSL_connect(ssl);
             if (ssl_connect_status == FAIL) /* perform the connection */
             {
+#ifdef DEBUG
                 printf("%d - ERROR WHEN ESTABLISHING BACKEND CONNECTION \n\n",node->node_no);
+#endif
             }
             front_sd,SSL_write(ssl, client_message, strlen(client_message));
             if (read_backend_write_client(ssl, front_sd) == FAIL)
             {
                 if (read_backend_write_client(ssl, front_sd) == FAIL)
                 {
+#ifdef DEBUG
                     printf("%d - Error during reading from the back end\n", node->node_no);
+#endif
                 }
             }
             shutdown(backend, 2);
@@ -233,7 +270,9 @@ void *handle_backend(void *Node)
         shutdown(front_sd, 2);
         close_client_fd = close(front_sd);
         if(close_client_fd < 0){
+#ifdef DEBUG
             printf("%d - FILE DESCRIPTOR not closed\n", node->node_no);
+#endif
             if(errno == EBADF)
             {
                 printf("invalid file descriptor\n");
