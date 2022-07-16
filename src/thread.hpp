@@ -239,7 +239,7 @@ void *handle_backend(void *Node)
         char *client_message = read_from_client(front_sd);
         if (client_message == NULL)
         {
-#ifdef DEBU
+#ifdef DEBUG
             printf("%d - Error on the client side\n", node->node_no);
 #endif
         }
