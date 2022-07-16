@@ -65,7 +65,8 @@ void my_thread_pool::populate_thread_pool()
     {
         my_thread_pool::push(&head, &tail, i);
     }
-    if(tail->next_thread == NULL){
+    if (tail->next_thread == NULL)
+    {
 #ifdef DEBUG
         printf("next thread of tail is NULL\n");
 #endif
@@ -134,7 +135,7 @@ void my_thread_pool::check_integrity()
 #ifdef DEBUG
     printf("checking integrity");
 #endif
-    while(temp != tail)
+    while (temp != tail)
     {
 #ifdef DEBUG
         printf("%d\n", temp->node_no);
@@ -150,12 +151,12 @@ void queue_myself(struct my_thread *node)
     {
         thread_pool->tail->next_thread = node;
     }
-    //as a last node, node's next thread should be null
+    // as a last node, node's next thread should be null
     node->next_thread = NULL;
     //** Make the new node as the last node */
     thread_pool->tail = node;
     // if thread comes back to thread pool of NULL, it should set head
-    if(thread_pool->head == NULL)
+    if (thread_pool->head == NULL)
     {
         thread_pool->head = node;
     }
@@ -165,7 +166,7 @@ void *handle_backend(void *Node)
 {
     int detach_status;
     detach_status = pthread_detach(pthread_self());
-    if(detach_status != 0 )
+    if (detach_status != 0)
     {
 #ifdef DEBUG
         printf("thread is not detached");
@@ -181,7 +182,8 @@ void *handle_backend(void *Node)
 #endif
     SSL_CTX *ctx = InitCTX();
     int ssl_connect_status;
-    while(node->status == STATUS_INITIAL){
+    while (node->status == STATUS_INITIAL)
+    {
         pthread_mutex_lock(&node->condition_mutex);
 #ifdef DEBUG
         printf("%d - first hibernation\n", node->node_no);
@@ -213,7 +215,7 @@ void *handle_backend(void *Node)
             if (mutex_lock != 0)
             {
 #ifdef DEBUG
-                printf("%d - queue mutex unlock failed: %d\n",node->node_no, mutex_lock);
+                printf("%d - queue mutex unlock failed: %d\n", node->node_no, mutex_lock);
 #endif
             }
 #ifdef DEBUG
@@ -235,12 +237,14 @@ void *handle_backend(void *Node)
 #endif
         // accepted socket is ready for reading
         char *client_message = read_from_client(front_sd);
-        if(client_message == NULL){
+        if (client_message == NULL)
+        {
 #ifdef DEBU
             printf("%d - Error on the client side\n", node->node_no);
 #endif
         }
-        else{
+        else
+        {
             SSL *ssl = SSL_new(ctx);
             backend = Create_Backend_Connection(backend_port, backend_address, backend_hostname);
             SSL_set_fd(ssl, backend);
@@ -248,10 +252,10 @@ void *handle_backend(void *Node)
             if (ssl_connect_status == FAIL) /* perform the connection */
             {
 #ifdef DEBUG
-                printf("%d - ERROR WHEN ESTABLISHING BACKEND CONNECTION \n\n",node->node_no);
+                printf("%d - ERROR WHEN ESTABLISHING BACKEND CONNECTION \n\n", node->node_no);
 #endif
             }
-            front_sd,SSL_write(ssl, client_message, strlen(client_message));
+            SSL_write(ssl, client_message, strlen(client_message));
             if (read_backend_write_client(ssl, front_sd) == FAIL)
             {
                 if (read_backend_write_client(ssl, front_sd) == FAIL)
@@ -269,23 +273,24 @@ void *handle_backend(void *Node)
         free(client_message);
         shutdown(front_sd, 2);
         close_client_fd = close(front_sd);
-        if(close_client_fd < 0){
+        if (close_client_fd < 0)
+        {
 #ifdef DEBUG
             printf("%d - FILE DESCRIPTOR not closed\n", node->node_no);
 #endif
-            if(errno == EBADF)
+            if (errno == EBADF)
             {
                 printf("invalid file descriptor\n");
             }
-            else if(errno == EINTR)
+            else if (errno == EINTR)
             {
                 printf("The close() call was interrupted by a signal\n");
             }
-            else if(errno == EIO)
+            else if (errno == EIO)
             {
                 printf("IO error \n");
             }
-      }
+        }
         node->socket_fd = 0;
         node->status = STATUS_RETURNING;
     }

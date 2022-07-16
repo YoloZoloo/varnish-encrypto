@@ -39,7 +39,7 @@ void *accept_connection(void *)
     {
         new_socket_fd = accept(client_sd, (struct sockaddr *)&address, (socklen_t *)&addrlen);
 #ifdef DEBUG
-        printf("accepted connecton socket descriptor: %d\n", new_socket_fd);
+        printf("accepted connection socket descriptor: %d\n", new_socket_fd);
 #endif
         n = thread_pool->dequeue_worker(new_socket_fd);
         if (n == 0)
