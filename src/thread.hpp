@@ -58,10 +58,14 @@ class WORKER_THREAD
     and the thread for the task will be taken out from the front of the list
     */
 public:
-    worker_thread *head = (worker_thread *) malloc(2*sizeof(worker_thread*));
+    worker_thread *head = (worker_thread *) malloc(
+        sizeof(pthread_mutex_t) + sizeof(pthread_cond_t) +
+        sizeof(struct worker_thread) + sizeof(pthread_t) + 3 * sizeof(int));
     worker_thread *temp = NULL;
     worker_thread *tail = NULL;
-    worker_thread *head_idle = (worker_thread *) malloc(2*sizeof(worker_thread*));
+    worker_thread *head_idle = (worker_thread *) malloc(
+        sizeof(pthread_mutex_t) + sizeof(pthread_cond_t) +
+        sizeof(struct worker_thread) + sizeof(pthread_t) + 3 * sizeof(int));
     struct worker_thread *tail_idle = NULL;
     void populate_thread_pool();
     void push(struct worker_thread **head, struct worker_thread **tail, int node_number);
@@ -157,7 +161,14 @@ int WORKER_THREAD::dequeue_worker(int sockfd)
     #endif
     head->next_thread = temp->next_thread;
     #ifdef DEBUG
-        printf("%d - thread pool head shifted to this\n", head->node_no);
+         if(head->next_thread != NULL)
+        {
+            printf("%d - thread pool head shifted to this\n", head->next_thread->node_no);
+        }
+        else
+        {
+            printf("%d - thread pool head shifted to this\n", NULL);
+        }
     #endif
     return 1;
 }
@@ -255,7 +266,6 @@ void *handle_backend(void *Node)
     // SSL
     SSL_CTX *ctx = InitCTX();
     int ssl_connect_status;
-
     #ifdef DEBUG
         printf("---------------starting thread------------------ %d\n", node->node_no);
     #endif
@@ -311,10 +321,6 @@ void *handle_backend(void *Node)
                 if(events[i].events & EPOLLRDHUP)
                 {
                     printf("closing backend connection %d\n", node->backend_sd);
-                    printf("closing backend connection %d\n", node->backend_sd);
-                    // SSL_shutdown(hashmap[node->backend_sd]);
-                    printf("closing backend connection %d\n", node->backend_sd);
-                    SSL_free(hashmap[node->backend_sd]);
                     shutdown(node->backend_sd, 2);
                     if(close(node->backend_sd) == FAIL)
                     {  
@@ -380,6 +386,7 @@ void *handle_backend(void *Node)
                 hashmap[backend] = ssl;
                 // set_nonblocking(backend);
                 SSL_set_fd(ssl, backend);
+            if( ssl != NULL){
                 do
                 {
                     ssl_connect_status = SSL_connect(ssl);
@@ -391,7 +398,7 @@ void *handle_backend(void *Node)
                             printf("%d - SSL connection was shutdown controller by SSL protocol \n\n", node->node_no);
                             break;
                         default:
-                            switch(ssl_connect_status) {
+                            switch(SSL_get_error(ssl, ssl_connect_status)) {
                                 case SSL_ERROR_WANT_READ:
                                     //do nothing
                                 case SSL_ERROR_WANT_WRITE:
@@ -404,24 +411,25 @@ void *handle_backend(void *Node)
                             }
                     }
                 } while (ssl_connect_status == FAIL);
-            }
+           }
+           }
             else{
                 printf("setting backend from node itself\n");
                 backend = node->backend_sd;
                 printf("setting ssl from hashmap\n");
             }
-            
-            SSL_write(hashmap[node->backend_sd], client_message, strlen(client_message));
-            if (read_backend_write_client(hashmap[node->backend_sd], front_sd) == FAIL)
+
+            SSL_write(hashmap[backend], client_message, strlen(client_message));
+            if (read_backend_write_client(hashmap[backend], front_sd) == FAIL)
             {
-                if (read_backend_write_client(hashmap[node->backend_sd], front_sd) == FAIL)
+                if (read_backend_write_client(hashmap[backend], front_sd) == FAIL)
                 {
                     #ifdef DEBUG
                         printf("%d - Error during reading from the back end\n", node->node_no);
                     #endif
                     shutdown(backend, 2);
                     close(backend);
-                    SSL_shutdown(hashmap[node->backend_sd]);
+//                    SSL_shutdown(hashmap[node->backend_sd]);
                     SSL_free(hashmap[node->backend_sd]);
                     node->status = STATUS_RETURNING_TO_INACTIVE;
                 }
