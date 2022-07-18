@@ -67,12 +67,13 @@ int main(int argc, char *argv[])
     printf("port: %d, hostname: %s, por num: %d \n", client_port, backend_hostname, backend_port);
 
     set_host(backend_hostname);
-    backend_sd = socket(PF_INET, SOCK_STREAM, 0);
+    BACKEND_SD = socket(PF_INET, SOCK_STREAM, 0);
     bzero(&backend_address, sizeof(backend_address));
     backend_address.sin_family = AF_INET;
     backend_address.sin_port = htons(backend_port);
     backend_address.sin_addr.s_addr = *(long *)(host->h_addr);
 
+    set_nonblocking(BACKEND_SD);
     struct CLIENT_SOCKET client_socket = (struct CLIENT_SOCKET)listen_on_socket(client_port);
     client_sd = client_socket.server_fd;
     address = client_socket.address;

@@ -110,6 +110,16 @@ int Create_Backend_Connection(int port, struct sockaddr_in addr, char* hostname)
     return sd;
 }
 
+void set_nonblocking(int fd)
+{
+    int status = fcntl(fd, F_SETFL, O_NONBLOCK);
+    printf("setting socket to nonblocking\n");
+    if (status == -1)
+    {
+        perror("calling fcntl");
+    }
+}
+
 // Load crypto
 SSL_CTX *InitCTX(void)
 {
