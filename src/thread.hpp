@@ -181,6 +181,7 @@ void *handle_backend(void *Node)
     printf("---------------starting thread------------------ %d\n", node->node_no);
 #endif
     SSL_CTX *ctx = InitCTX();
+    SSL *ssl = SSL_new(ctx);
     int ssl_connect_status;
     while (node->status == STATUS_INITIAL)
     {
@@ -204,7 +205,7 @@ void *handle_backend(void *Node)
                 if (pthread_mutex_trylock(&queue_lock) != 0)
                 {
                     // sleep for 300ms
-                    sleep(3);
+                    sleep(1);
                 }
                 else
                 {
@@ -245,7 +246,7 @@ void *handle_backend(void *Node)
         }
         else
         {
-            SSL *ssl = SSL_new(ctx);
+            SSL_clear(ssl);
             backend = Create_Backend_Connection(backend_port, backend_address, backend_hostname);
             SSL_set_fd(ssl, backend);
             ssl_connect_status = SSL_connect(ssl);
@@ -268,7 +269,6 @@ void *handle_backend(void *Node)
             shutdown(backend, 2);
             close(backend);
             SSL_shutdown(ssl);
-            SSL_free(ssl);
         }
         free(client_message);
         shutdown(front_sd, 2);

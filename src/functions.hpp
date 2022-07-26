@@ -201,6 +201,11 @@ int backend_write(SSL *ssl, char *client_message)
             printf("SSL_ERROR_WANT_X509_LOOKUP\n");
             return RECONNECT;
         }
+        else if (ret > 0)
+        {
+            printf("Successfull SSL_write: %d\n", ret);
+            return SUCCESS;
+        }
         else
         {
             // read_backend_write_client(ssl, client_socket);
@@ -236,6 +241,11 @@ int read_backend_write_client(SSL *ssl, int client_socket)
                 printf("SSL_ERROR_WANT_WRITE\n");
                 return 0;
             }
+            else if (ret == SSL_ERROR_WANT_READ)
+            {
+                printf("SSL_ERROR_WANT_READ\n");
+                return 0;
+            }
             else if (ret == SSL_ERROR_WANT_CONNECT)
             {
                 printf("SSL_ERROR_WANT_CONNECT\n");
@@ -246,9 +256,10 @@ int read_backend_write_client(SSL *ssl, int client_socket)
                 printf("SSL_ERROR_WANT_X509_LOOKUP\n");
                 return 0;
             }
-            else if (ret == SSL_ERROR_WANT_X509_LOOKUP)
+            else if (ret > 0)
             {
-
+                printf("Successfull SSL_read: %d\n", ret);
+                return SUCCESS;
             }
             else
             {
