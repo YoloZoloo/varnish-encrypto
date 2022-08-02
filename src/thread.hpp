@@ -182,7 +182,6 @@ void *handle_backend(void *Node)
 #endif
     SSL_CTX *ctx = InitCTX();
     SSL *ssl = SSL_new(ctx);
-    int ssl_connect_status;
     while (node->status == STATUS_INITIAL)
     {
         pthread_mutex_lock(&node->condition_mutex);
@@ -246,29 +245,24 @@ void *handle_backend(void *Node)
         }
         else
         {
-            SSL_clear(ssl);
+            if (SSL_clear(ssl) == FAIL)
+            {
+                printf("SSL_clear failed\n");
+            }
             backend = Create_Backend_Connection(backend_port, backend_address, backend_hostname);
             SSL_set_fd(ssl, backend);
-            ssl_connect_status = SSL_connect(ssl);
-            if (ssl_connect_status == FAIL) /* perform the connection */
+            if (backend_connect(ssl) != FAIL)
             {
-#ifdef DEBUG
-                printf("%d - ERROR WHEN ESTABLISHING BACKEND CONNECTION \n\n", node->node_no);
-#endif
-            }
-            SSL_write(ssl, client_message, strlen(client_message));
-            if (read_backend_write_client(ssl, front_sd) == FAIL)
-            {
-                if (read_backend_write_client(ssl, front_sd) == FAIL)
+                if (backend_write(ssl, client_message) != FAIL)
                 {
-#ifdef DEBUG
-                    printf("%d - Error during reading from the back end\n", node->node_no);
-#endif
+                    if (read_backend_write_client(ssl, front_sd) != FAIL)
+                    {
+                        SSL_shutdown(ssl);
+                    }
                 }
             }
             shutdown(backend, 2);
             close(backend);
-            SSL_shutdown(ssl);
         }
         free(client_message);
         shutdown(front_sd, 2);
