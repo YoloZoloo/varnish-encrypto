@@ -204,10 +204,6 @@ int backend_connect(SSL *ssl)
             printf("Error reason: %d\n", ret);
             return FAIL;
         }
-
-#ifdef DEBUG
-        printf("%d - ERROR WHEN ESTABLISHING BACKEND CONNECTION \n\n", node->node_no);
-#endif
     }
     return SUCCESS;
 }

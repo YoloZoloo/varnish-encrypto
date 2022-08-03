@@ -20,6 +20,8 @@
 #define STATUS_SLEEPING -101
 #define STATUS_INITIAL -102
 
+struct timespec rem, req = {0, 100000};
+
 pthread_mutex_t queue_lock = PTHREAD_MUTEX_INITIALIZER;
 char *backend_hostname;
 int backend_port;
@@ -204,7 +206,7 @@ void *handle_backend(void *Node)
                 if (pthread_mutex_trylock(&queue_lock) != 0)
                 {
                     // sleep for 300ms
-                    sleep(1);
+                    nanosleep(&rem, &req);
                 }
                 else
                 {
