@@ -12,29 +12,6 @@
 #include <openssl/bio.h>
 #include <fcntl.h>
 
-#define FAIL -1
-#define RECONNECT 0
-#define SUCCESS 1
-#define CLIENT_SOCKET_BACKLOG 100
-#define BACKEND_BUFFER 65536
-
-// backend host
-struct hostent *host;
-
-struct SOCKET_INFO
-{
-    int backend_port;
-    char *backend_hostname;
-    int server_fd;
-    struct sockaddr_in address;
-};
-
-struct CLIENT_SOCKET
-{
-    int server_fd;
-    struct sockaddr_in address;
-};
-
 struct CLIENT_SOCKET listen_on_socket(int server_port)
 {
     int server_fd;
@@ -71,12 +48,6 @@ struct CLIENT_SOCKET listen_on_socket(int server_port)
     return server_socket;
 }
 
-struct BACKEND_SOCKET
-{
-    int sd;
-    struct sockaddr_in address;
-};
-
 void set_host(const char *hostname)
 {
     if ((host = gethostbyname(hostname)) == NULL)
@@ -110,6 +81,21 @@ int Create_Backend_Connection(int port, struct sockaddr_in addr, char *hostname)
         close(sd);
     }
     return sd;
+}
+
+void set_nonblocking(int fd)
+{
+    int status = fcntl(fd, F_SETFL, O_NONBLOCK);
+    printf("setting socket to nonblocking\n");
+    if (status == -1)
+    {
+        perror("calling fcntl");
+    }
+}
+
+int fd_is_valid(int fd)
+{
+    return fcntl(fd, F_GETFD) != -1 || errno != EBADF;
 }
 
 // Load crypto
@@ -158,17 +144,17 @@ char *read_from_client(int socket_front)
     read_from_client = read(socket_front, client_buffer, 1024); /* get reply & decrypt */
     if (read_from_client == FAIL)
     {
-#ifdef DEBUG
-        printf("%d fd - failed reading from client\n", socket_front);
-#endif
+        #ifdef DEBUG
+            printf("%d fd - failed reading from client\n", socket_front);
+        #endif
         free(client_buffer);
         return null_pointer;
     }
     else if (read_from_client == 0)
     {
-#ifdef DEBUG
-        printf("%d fd - empty request\n", socket_front);
-#endif
+        #ifdef DEBUG
+            printf("%d fd - empty request\n", socket_front);
+        #endif
         free(client_buffer);
         return null_pointer;
     }
@@ -195,9 +181,13 @@ int backend_connect(SSL *ssl)
             ERR_print_errors_fp(stderr);
             return FAIL;
         case SSL_ERROR_SYSCALL:
-            printf("A fatal non-recoverable error during SSL_ERROR_SYSCALL: %d\n", ret);
-            ERR_print_errors_fp(stderr);
-            return FAIL;
+            // retry on SSL_ERROR_SYSCALL
+            #ifdef DEBUG
+                printf("A fatal non-recoverable error during SSL_ERROR_SYSCALL SSL_Connect: %d\n", ret);
+                ERR_print_errors_fp(stderr);
+                printf("SSL_connect errno: %d\n", errno);
+            #endif
+            return RECONNECT;
         case SSL_ERROR_NONE:
             printf("Successful SSL_read: %d\n", ret);
         default:
@@ -227,9 +217,13 @@ int backend_write(SSL *ssl, char *client_message)
             ERR_print_errors_fp(stderr);
             return FAIL;
         case SSL_ERROR_SYSCALL:
-            printf("A fatal non-recoverable error during SSL_ERROR_SYSCALL: %d\n", ret);
-            ERR_print_errors_fp(stderr);
-            return FAIL;
+            // retry on SSL_ERROR_SYSCALL
+            #ifdef DEBUG
+                printf("A fatal non-recoverable error during SSL_ERROR_SYSCALL SSL_Connect: %d\n", ret);
+                ERR_print_errors_fp(stderr);
+                printf("SSL_connect errno: %d\n", errno);
+            #endif
+            return RECONNECT;
         case SSL_ERROR_NONE:
             printf("Successful SSL_read: %d\n", ret);
         default:
@@ -247,11 +241,10 @@ int read_backend_write_client(SSL *ssl, int client_socket)
     char buf[BACKEND_BUFFER] = {0};
     do
     {
-        // printf("backend-read iterating... \n");
         bytes = SSL_read(ssl, buf, sizeof(buf)); /* get reply & decrypt */
-#ifdef DEBUG
-        printf("%d fd - backend read bytes: %d\n", client_socket, bytes);
-#endif
+        #ifdef DEBUG
+            printf("%d fd - backend read bytes: %d\n", client_socket, bytes);
+        #endif
         if (bytes <= 0)
         {
             ret = SSL_get_error(ssl, bytes);
@@ -262,13 +255,18 @@ int read_backend_write_client(SSL *ssl, int client_socket)
             case SSL_ERROR_WANT_READ:
                 printf("SSL_ERROR_WANT_READ: \n");
             case SSL_ERROR_SSL:
-                printf("A fatal non-recoverable error during SSL_read: %d\n", ret);
+                printf("A fatal non-recoverable error during SSL_ERROR_SSL SSL_read: %d\n", ret);
+                ERR_error_string(ret, NULL );
                 ERR_print_errors_fp(stderr);
                 return FAIL;
             case SSL_ERROR_SYSCALL:
-                printf("A fatal non-recoverable error during SSL_ERROR_SYSCALL: %d\n", ret);
-                ERR_print_errors_fp(stderr);
-                return FAIL;
+                // retry on SSL_ERROR_SYSCALL
+                #ifdef DEBUG
+                    printf("A fatal non-recoverable error during SSL_ERROR_SYSCALL SSL_Connect: %d\n", ret);
+                    ERR_print_errors_fp(stderr);
+                    printf("SSL_connect errno: %d\n", errno);
+                #endif
+                return RECONNECT;
             case SSL_ERROR_NONE:
                 printf("Successful SSL_read: %d\n", ret);
             default:

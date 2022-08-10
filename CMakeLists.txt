@@ -7,7 +7,7 @@ enable_testing()
 set(OPENSSL_ROOT_DIR /usr/include/openssl)
 
 add_executable(varnish-encrypto src/encrypto.cpp)
-
+#add_definitions(-DDEBUG)
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 set(THREADS_PREFER_PTHREAD_FLAG ON)
