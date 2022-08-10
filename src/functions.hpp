@@ -144,17 +144,17 @@ char *read_from_client(int socket_front)
     read_from_client = read(socket_front, client_buffer, 1024); /* get reply & decrypt */
     if (read_from_client == FAIL)
     {
-#ifdef DEBUG
-        printf("%d fd - failed reading from client\n", socket_front);
-#endif
+        #ifdef DEBUG
+            printf("%d fd - failed reading from client\n", socket_front);
+        #endif
         free(client_buffer);
         return null_pointer;
     }
     else if (read_from_client == 0)
     {
-#ifdef DEBUG
-        printf("%d fd - empty request\n", socket_front);
-#endif
+        #ifdef DEBUG
+            printf("%d fd - empty request\n", socket_front);
+        #endif
         free(client_buffer);
         return null_pointer;
     }
