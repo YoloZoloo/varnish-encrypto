@@ -266,7 +266,6 @@ void *handle_thread_task(void *Node)
             {
                 thread_pool->queue_to_inactive_pool(node);
             }
-
             if (node->status == STATUS_RETURNING_TO_IDLE)
             {
                 thread_pool->queue_to_idle_pool(node);

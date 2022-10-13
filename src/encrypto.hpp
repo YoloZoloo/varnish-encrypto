@@ -28,7 +28,11 @@
 #define EPOLL_TIMEOUT 200
 
 #define CLIENT_SOCKET_BACKLOG 100
+<<<<<<< HEAD
 #define BACKEND_BUFFER 17000
+=======
+#define BACKEND_BUFFER 65536
+>>>>>>> main
 
 #define IDLE 1
 #define INACTIVE 0
@@ -111,6 +115,7 @@ class WORKER_THREAD
 public:
     worker_thread *head_inactive = (worker_thread *) malloc(
         2 * sizeof(pthread_mutex_t) + sizeof(pthread_cond_t) +
+<<<<<<< HEAD
         2 * sizeof(worker_thread) + sizeof(pthread_t) +
         5 * sizeof(int) + sizeof(SSL*)
     );
@@ -118,6 +123,16 @@ public:
     worker_thread *head_idle = (worker_thread *) malloc(
         2 * sizeof(pthread_mutex_t) + sizeof(pthread_cond_t) +
         2 * sizeof(worker_thread) + sizeof(pthread_t) +
+=======
+        2 * sizeof(worker_thread) + sizeof(pthread_t) + 
+        5 * sizeof(int) + sizeof(SSL*)
+    );
+    worker_thread *NULL_P = NULL;
+    worker_thread *tail_inactive = NULL;
+    worker_thread *head_idle = (worker_thread *) malloc(
+        2 * sizeof(pthread_mutex_t) + sizeof(pthread_cond_t) +
+        2 * sizeof(worker_thread) + sizeof(pthread_t) + 
+>>>>>>> main
         5 * sizeof(int) + sizeof(SSL*)
     );
     worker_thread *tail_idle = NULL;

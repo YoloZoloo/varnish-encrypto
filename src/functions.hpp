@@ -277,7 +277,6 @@ int read_backend_write_client(SSL *ssl, int client_socket)
                 printf("SSL_ERROR_SSL\n");
             default:
                 printf("Error reason: %s\n", strerror(errno));
-//                return FAIL;
             }
             return FAIL;
         }
