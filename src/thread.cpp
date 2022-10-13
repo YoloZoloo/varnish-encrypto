@@ -19,26 +19,18 @@
 #ifdef __unix__
 #include <sys/epoll.h>
 #endif
-#include <map>
+#include <unordered_set>
 
-std::map<int, worker_thread*> hashmap;
+std::unordered_set<int> uset;
 void signal_handler(int signum);
-
 WORKER_THREAD *thread_pool = new WORKER_THREAD;
 
 void WORKER_THREAD::populate_thread_pool()
 {
     head_inactive->next_thread = NULL;
     head_idle->next_thread = NULL;
-    for (int i = 0; i < THREAD_NUMBER; i++)
-    {
+    for (int i = 0; i < THREAD_NUMBER; i++) {
         WORKER_THREAD::push(&head_inactive, &tail_inactive, i);
-    }
-    if (tail_inactive->next_thread == NULL)
-    {
-#ifdef DEBUG
-        printf("next thread of tail is NULL\n");
-#endif
     }
 }
 // insert a new node in front of the list
@@ -46,7 +38,7 @@ void WORKER_THREAD::push(worker_thread **head_inactive, worker_thread **tail_ina
 {
     worker_thread *newNode = (worker_thread *) malloc(
         2 * sizeof(pthread_mutex_t) + sizeof(pthread_cond_t) +
-        2 * sizeof(worker_thread) + sizeof(pthread_t) + 
+        2 * sizeof(worker_thread) + sizeof(pthread_t) +
         5 * sizeof(int) + sizeof(SSL*)
     );
 
@@ -60,17 +52,17 @@ void WORKER_THREAD::push(worker_thread **head_inactive, worker_thread **tail_ina
     newNode->pool_index = INACTIVE;
     newNode->prev_thread = NULL;
     pthread_create(&(newNode->thread), NULL, &handle_thread_task, (void *)(newNode));
+
     // // /* Link the last node to the new node */
-    if (*tail_inactive != NULL)
-    {
+    if (*tail_inactive != NULL) {
         (*tail_inactive)->next_thread = newNode;
     }
     // /* Make the new node as the last node */
     *tail_inactive = newNode;
     newNode->next_thread = NULL;
-    if ((*head_inactive)->next_thread == NULL)
-    {
-        /* Move the head to point to the new node */
+
+    /* Move the head to point to the new node */
+    if ((*head_inactive)->next_thread == NULL) {
         (*head_inactive)->next_thread = newNode;
     }
 }
@@ -79,73 +71,60 @@ and assign task to it.
 */
 void WORKER_THREAD::dequeue_from_idle_pool(worker_thread * node, int sockfd)
 {
-    #ifdef DEBUG
-        printf("%d - dequeueing idle connection\n", head_idle->next_thread->node_no);
-    #endif
     head_idle->next_thread->client_sd = sockfd;
     head_idle->next_thread->status = STATUS_READY;
     pthread_cond_signal(&head_idle->next_thread->condition_cond);
     head_idle->next_thread = head_idle->next_thread->next_thread;
-    if(head_idle->next_thread != NULL)
-    {
-        #ifdef DEBUG
-            printf("%d - thread pool head shifted to this\n", head_idle->next_thread->node_no);
-        #endif
-    }
-    else
-    {
+
+    if(head_idle->next_thread == NULL) {
         tail_idle = NULL;
-        #ifdef DEBUG
-            printf("thread pool head shifted to NULL\n");
-        #endif
     }
 }
 
 void WORKER_THREAD::dequeue_from_inactive_pool(worker_thread * node, int sockfd)
 {
-    #ifdef DEBUG
-        printf("%d - dequeueing INACTIVE connection\n", head_inactive->next_thread->node_no);
-     #endif
     node->client_sd = sockfd;
     node->status = STATUS_READY;
     pthread_cond_signal(&node->condition_cond);
     head_inactive->next_thread = node->next_thread;
-    if(head_inactive->next_thread != NULL)
-    {
-        #ifdef DEBUG
-            printf("%d - thread pool head shifted to this\n", head_inactive->next_thread->node_no);
-        #endif
-    }
-    else
-    {
+    if(head_inactive->next_thread == NULL) {
         tail_inactive = NULL;
-        #ifdef DEBUG
-            printf("thread pool head shifted to NULL\n");
-        #endif
     }
 }
+
+int val_fd (int fd)
+{
+    printf("fd: %d\n", fd);
+    if (uset.find(fd) == uset.end()) {
+        printf("not a valid fd \n");
+        return 0;
+    }
+    if (epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, &ev) == -1) {
+        printf("EPOLL_CTL_DEL failed %s \n", strerror(errno));
+    }
+    return 1;
+}
+
 int WORKER_THREAD::dequeue_worker(int sockfd)
 {
-    if(head_idle == NULL)
-    {
+    if(head_idle == NULL) {
         printf("head_idle is NULL\n");
     }
-    if(head_idle->next_thread != NULL)
-    {
-        #ifdef DEBUG
-             printf("trying to dequeue idle thread\n");
-        #endif
+    if(head_idle->next_thread != NULL) {
         // the thread must be sleeping and only one of the two; backend connection closing thread or dequeueing thread
         // can wake up threads in the idle connection pool
-        if(pthread_mutex_trylock(&(head_idle->next_thread->wakeup_mutex)) == 0)
-        {
+        if(pthread_mutex_trylock(&(head_idle->next_thread->wakeup_mutex)) == 0) {
+            printf("backend socket file descriptor %d \n", head_idle->next_thread->backend_sd);
+            if (val_fd (head_idle->next_thread->backend_sd) == 0) {
+                head_idle->next_thread->pool_index = INACTIVE;
+            }
             dequeue_from_idle_pool(head_idle->next_thread, sockfd);
             return 1;
         }
     }
     if(head_inactive->next_thread != NULL)
     {
-        if(pthread_mutex_trylock(&(head_inactive->next_thread->wakeup_mutex)) == 0){
+        if(pthread_mutex_trylock(&(head_inactive->next_thread->wakeup_mutex)) == 0) {
             dequeue_from_inactive_pool(head_inactive->next_thread, sockfd);
             return 1;
         }
@@ -166,7 +145,6 @@ void WORKER_THREAD::queue_to_idle_pool(worker_thread *node)
         }
         else
         {
-            hashmap[node->backend_sd] = node;
             //**queue the thread to the end of the list*/
             if (tail_idle != NULL)
             {
@@ -185,13 +163,6 @@ void WORKER_THREAD::queue_to_idle_pool(worker_thread *node)
             }
             node->pool_index = IDLE;
 
-            #ifdef DEBUG
-                printf("queued worker to idle pool!\n");
-            #endif
-
-            #ifdef DEBUG
-                printf("adding fd %d to Epoll\n",node->backend_sd);
-            #endif
             ev.data.fd = node->backend_sd;
             if (epoll_ctl(epollfd, EPOLL_CTL_ADD, node->backend_sd, &ev) == -1) {
                 if(errno != EEXIST)
@@ -201,12 +172,9 @@ void WORKER_THREAD::queue_to_idle_pool(worker_thread *node)
             }
 
             node->status = STATUS_SLEEPING;
-
             if (pthread_mutex_unlock(&idle_queue_mutex) != 0)
             {
-                #ifdef DEBUG
-                    printf("%d - queue mutex unlock failed \n", node->node_no);
-                #endif
+                printf("%d - queue mutex unlock failed \n", node->node_no);
             }
         }
     }
@@ -241,65 +209,13 @@ void WORKER_THREAD::queue_to_inactive_pool(worker_thread *node)
             //queueing back to sleep
             node->status = STATUS_SLEEPING;
             node->pool_index  = INACTIVE;
-            #ifdef DEBUG
-                printf("queued %d thread to INACTIVE pool\n", node->node_no);
-            #endif
 
             if (pthread_mutex_unlock(&queue_mutex) != 0)
             {
-                #ifdef DEBUG
-                    printf("%d - queue mutex unlock failed: \n", node->node_no);
-                #endif
+                printf("%d - queue mutex unlock failed: \n", node->node_no);
             }
 
         }
-    }
-}
-void WORKER_THREAD::close_idle_connections(worker_thread *node)
-{
-    #ifdef DEBUG
-        printf("closing backend connection %d\n", node->backend_sd);
-    #endif
-    if (epoll_ctl(epollfd, EPOLL_CTL_DEL, node->backend_sd, &ev) == -1) {
-        perror("epoll_ctl: delete node backend connection socket descriptor");
-    }
-    shutdown(node->backend_sd, 2);
-    if(close(node->backend_sd) == FAIL)
-    {
-        perror("closing backend sd after remote peer has closed their end\n");
-    }
-    //take the node out of the linked list
-    if(node->prev_thread != NULL)
-    {
-        node->prev_thread->next_thread = node->next_thread;
-        if(node == tail_idle)
-        {
-            if(head_idle->next_thread == node)
-            {
-                tail_idle = NULL;
-            }
-            else if(head_idle->next_thread != node)
-            {
-                tail_idle = node->prev_thread;
-            }
-        }
-        //close client connection as well
-        if(fd_is_valid(node->client_sd))
-        {
-            shutdown(node->client_sd, 2);
-            if(close(node->client_sd) == FAIL)
-            {
-                perror("closing client sd after remote peer has closed their end\n");
-            }
-            else
-            {
-                printf("Client connection closed - %d\n", node->client_sd);
-            }
-        }
-    }
-    else
-    {
-        printf("NODE TO BE CLOSED IS NULL!!!!\n");
     }
 }
 
@@ -307,11 +223,11 @@ void signal_handler(int signum)
 {
     if(signum == SIGPIPE)
     {
-        printf("received SIGPIPE");
+        printf("received SIGPIPE\n");
     }
     else
     {
-        printf("RECEIVED SIGNAL OTHER THAN SIGPIPE!");
+        printf("RECEIVED SIGNAL OTHER THAN SIGPIPE!\n");
         exit(1);
     }
 }
@@ -325,9 +241,7 @@ void *handle_thread_task(void *Node)
     detach_status = pthread_detach(pthread_self());
     if (detach_status != 0)
     {
-        #ifdef DEBUG
-            printf("thread is not detached");
-        #endif
+        printf("thread is not detached");
     }
     worker_thread *node = (worker_thread *)Node;
 
@@ -339,15 +253,9 @@ void *handle_thread_task(void *Node)
     while (node->status == STATUS_INITIAL)
     {
         pthread_mutex_lock(&node->condition_mutex);
-        #ifdef DEBUG
-            printf("%d - first hibernation\n", node->node_no);
-        #endif
         pthread_cond_wait(&node->condition_cond, &node->condition_mutex);
         pthread_mutex_unlock(&node->condition_mutex);
     }
-    #ifdef DEBUG
-        printf("%d - came out of hibernation\n", node->node_no);
-    #endif
 
     for (;;)
     {
@@ -362,29 +270,15 @@ void *handle_thread_task(void *Node)
             {
                 thread_pool->queue_to_idle_pool(node);
             }
-            if (node->status == STATUS_CLOSING_CONNECTION)
-            {
-                thread_pool->close_idle_connections(node);
-                node->status = STATUS_RETURNING_TO_INACTIVE;
-                thread_pool->queue_to_inactive_pool(node);
-            }
 
-            #ifdef DEBUG
-                printf("%d - thread going into sleep\n", node->node_no);
-            #endif
             if(pthread_mutex_unlock(&(node->wakeup_mutex)) != 0)
             {
-                printf("unlocking wake up mutex after closing connection has failed \n");
+                printf("unlocking wake up mutex after completing thread task failed \n");
             }
+
             pthread_cond_wait(&node->condition_cond, &node->condition_mutex);
-            #ifdef DEBUG
-                printf("%d - thread woke up to task\n", node->node_no);
-            #endif
         }
         pthread_mutex_unlock(&node->condition_mutex);
-        #ifdef DEBUG
-            printf("%d thread is handling connection descriptor %d\n", node->node_no, node->client_sd);
-        #endif
 
         // REQUEST HANDLING STARTS HERE
         if(node->status == STATUS_READY)
@@ -393,130 +287,102 @@ void *handle_thread_task(void *Node)
         }
     }
 }
-void handle_backend(worker_thread *node, char* client_message, bool reconnecting)
+void handle_backend(worker_thread *node, char* client_message)
 {
-    int be_write;
-    int be_r_client_w;
+    int be_w_ret;
+    int rbe_wc_ret;
     if(node->pool_index == INACTIVE)
     {
         if (SSL_clear(node->ssl) == FAIL)
         {
-            printf("SSL_clear failed\n");
+            printf("SSL_clear failed %s\n", strerror(errno));
         }
-        node->backend_sd = Create_Backend_Connection(backend_port, backend_address, backend_hostname);
-        #ifdef DEBUG
-            printf("created backend connection socket %d\n", node->backend_sd);
-        #endif
+        node->backend_sd = create_source_endpoint(backend_port, backend_address, backend_hostname);
+
         SSL_set_fd(node->ssl, node->backend_sd);
-        if (backend_connect(node->ssl) == FAIL)
+        uset.insert(node->backend_sd);
+        if (backend_connect(node->ssl) == SUCCESS)
         {
-            shutdown(node->backend_sd, 2);
-            close(node->backend_sd);
-        }
-    }
-    be_write = backend_write(node->ssl, client_message);
-    if(be_write == SUCCESS)
-    {
-        be_r_client_w = read_backend_write_client(node->ssl, node->client_sd);
-        if(be_r_client_w == SUCCESS)
-        {
-            node->status = STATUS_RETURNING_TO_IDLE;
-        }
-        else if(be_r_client_w == RECONNECT)
-        {
-            if(reconnecting)
-            {
-                printf("RECONNECT returned twice BE_READ\n");
+            be_w_ret = backend_write(node->ssl, client_message);
+            if (be_w_ret == SUCCESS) {
+                if (read_backend_write_client(node->ssl, node->client_sd) == SUCCESS) {
+                    printf("successful transaction, be_fd: %d, client_f: %dd\n",
+                        SSL_get_fd(node->ssl), node->client_sd);
+                    node->status = STATUS_RETURNING_TO_IDLE;
+                }
+                else {
+                    printf("ssl read backend  write client failed \n");
+                }
             }
-            else
-            {
-                shutdown(node->backend_sd, 2);
-                close(node->backend_sd);
+            else if (be_w_ret == RECONNECT) {
+                printf("trying to reconnect \n");
                 node->pool_index = INACTIVE;
-                handle_backend(node, client_message, true);
+                handle_backend(node, client_message);
+            }
+            else {
+                printf("ssl backend  write failed \n");
             }
         }
-        else
-        {
-             printf("FAIL BE_READ\n");
+        else {
+            printf("ssl connect failed \n");
         }
     }
-    else if(be_write == RECONNECT)
-    {
-        if(reconnecting)
-        {
-            printf("RECONNECT returned twice BE_WRITE\n");
+    else {
+        be_w_ret = backend_write(node->ssl, client_message);
+        if (be_w_ret == SUCCESS) {
+            rbe_wc_ret = read_backend_write_client(node->ssl, node->client_sd);
+            if (rbe_wc_ret == SUCCESS) {
+                node->status = STATUS_RETURNING_TO_IDLE;
+            }
+            else if (rbe_wc_ret == RECONNECT) {
+                printf("trying to reconnect rbe_wc\n");
+                node->pool_index = INACTIVE;
+                handle_backend(node, client_message);
+            }
         }
-        else
-        {
-            shutdown(node->backend_sd, 2);
-            close(node->backend_sd);
+        else if (be_w_ret == RECONNECT) {
+            printf("trying to reconnect w_be\n");
             node->pool_index = INACTIVE;
-            handle_backend(node, client_message, true);
+            handle_backend(node, client_message);
+        }
+        else {
+            printf("ssl backend  write failed \n");
         }
     }
-    else
-    {
-        printf("FAIL BE_WRITE\n");
+    if(node->status == STATUS_RETURNING_TO_INACTIVE) {
+        printf("failed transaction\n");
     }
 }
 
-void handle_request(worker_thread *node){
+void handle_request(worker_thread *node) {
     //always gravitate towards inactive pool
     node->status = STATUS_RETURNING_TO_INACTIVE;
 
     char *client_message = read_from_client(node->client_sd);
-    if (client_message == NULL)
+    // NULL means unsuccessful reading from the client
+    if (client_message != NULL)
     {
-        #ifdef DEBUG
-            printf("%d - Error on the client side\n", node->node_no);
-        #endif
-    }
-    else
-    {
-        handle_backend(node, client_message, false);
+        handle_backend(node, client_message);
         if(node->status == STATUS_RETURNING_TO_INACTIVE)
         {
             shutdown(node->backend_sd, 2);
             close(node->backend_sd);
-        }
-        else
-        {
-            hashmap[node->backend_sd] = node;
+            uset.erase(node->backend_sd);
         }
     }
     free(client_message);
+    //check validatity because some clients might leave during the transaction.
     if(fd_is_valid(node->client_sd))
     {
         shutdown(node->client_sd, 2);
-        if (close(node->client_sd) < 0)
-        {
-            #ifdef DEBUG
-                printf("%d - FILE DESCRIPTOR not closed\n", node->node_no);
-            #endif
-            if (errno == EBADF)
-            {
-                printf("invalid client connection file descriptor - %d\n", node->client_sd);
-            }
-            else if (errno == EINTR)
-            {
-                printf("The close() call was interrupted by a signal\n");
-            }
-            else if (errno == EIO)
-            {
-                printf("IO error \n");
-            }
+        if (close(node->client_sd) < 0) {
+            printf("failed to close client side socket %s \n", strerror(errno));
         }
     }
 }
 
-
-
 void* monitor_idle_connections(void*)
 {
-    worker_thread *tempNode;
-    int bytes = 0;
-    char buf[BACKEND_BUFFER] = {0};
     int n;
     for(;;)
     {
@@ -525,26 +391,14 @@ void* monitor_idle_connections(void*)
         {
             if((events[i].events & EPOLLRDHUP) && events[i].data.fd != BACKEND_SD)
             {
-                #ifdef DEBUG
-                    printf("event detected %d\n", events[i].data.fd);
-                #endif
-                tempNode = hashmap[events[i].data.fd];
-                if(tempNode == NULL)
-                {
-                     printf("tempNode == NULL\n");
-                     break;
+                printf("event detected, closing fd %d\n", events[i].data.fd);
+                if (epoll_ctl(epollfd, EPOLL_CTL_DEL, events[i].data.fd, &ev) == -1) {
+                    printf("epoll_ctl: delete failed %s", strerror(errno));
                 }
-                if(pthread_mutex_trylock(&(tempNode->wakeup_mutex)) == 0)
-                {
-                    if(events[i].events & EPOLLIN)
-                    {
-                        read_backend_write_client(tempNode->ssl, tempNode->client_sd);
-                        bytes = SSL_read(tempNode->ssl, buf, sizeof(buf));
-                        printf("read %d bytes right before closing\n", bytes);
-                    }
-                    tempNode->status = STATUS_CLOSING_CONNECTION;
-                    pthread_cond_signal(&(tempNode->condition_cond));
+                if (close(events[i].data.fd) != 0) {
+                    printf("failed closing backend socket on epoll event %s\n", strerror (errno));
                 }
+                uset.erase(events[i].data.fd);
             }
         }
     }
