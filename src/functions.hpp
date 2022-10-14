@@ -248,7 +248,7 @@ int read_backend_write_client(SSL *ssl, int client_socket)
         if (! fd_is_valid (SSL_get_fd(ssl)) ) {
             return FAIL;
         }
-        bytes = SSL_read(ssl, buf, sizeof(buf)); /* get reply & decrypt */
+        bytes = SSL_read(ssl, buf, BACKEND_BUFFER + 1); /* get reply & decrypt */
         if (bytes == 0) {
             return RECONNECT; //it can be clean shutdown on the peer end
         }
@@ -278,6 +278,6 @@ int read_backend_write_client(SSL *ssl, int client_socket)
         }
         buf[bytes] = 0;
         send(client_socket, buf, bytes, 0);
-    } while (SSL_pending(ssl) > 0);
+    } while (SSL_pending(ssl) > 0 || bytes == BACKEND_BUFFER);
     return SUCCESS;
 }

@@ -22,12 +22,11 @@
 #define FAIL -1
 #define RECONNECT 0
 #define SUCCESS 1
-#define THREAD_NUMBER 300
+#define THREAD_NUMBER 350
 #define MAX_EVENTS 3
 
 #define CLIENT_SOCKET_BACKLOG 100
-#define BACKEND_BUFFER 17000
-
+#define BACKEND_BUFFER 16384
 #define IDLE 1
 #define INACTIVE 0
 
