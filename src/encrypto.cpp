@@ -79,12 +79,12 @@ int main(int argc, char *argv[])
 
     pthread_t acceptor_thread = (pthread_t)THREAD_NUMBER + 1;
     pthread_create(&acceptor_thread, NULL, accept_connection, NULL);
-    pthread_t idle_connection_keeper = (pthread_t)THREAD_NUMBER + 2;
-    pthread_create(&idle_connection_keeper, NULL, monitor_idle_connections, NULL);
-    if (pthread_detach(idle_connection_keeper) != 0)
-    {
-        printf("thread is not detached");
-    }
+//    pthread_t idle_connection_keeper = (pthread_t)THREAD_NUMBER + 2;
+//    pthread_create(&idle_connection_keeper, NULL, monitor_idle_connections, NULL);
+//    if (pthread_detach(idle_connection_keeper) != 0)
+//    {
+//        printf("thread is not detached");
+//    }
     pthread_join(acceptor_thread, NULL);
     return 0;
 }
