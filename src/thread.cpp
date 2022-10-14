@@ -67,14 +67,10 @@ and assign task to it.
 */
 void WORKER_THREAD::dequeue_from_pool(worker_thread * node, int sockfd)
 {
-    head->next_thread->client_sd = sockfd;
-    head->next_thread->status = STATUS_READY;
-    pthread_cond_signal(&head->next_thread->condition_cond);
-    head->next_thread = head->next_thread->next_thread;
-
-    if(head->next_thread == NULL) {
-        tail = NULL;
-    }
+    node->client_sd = sockfd;
+    node->status = STATUS_READY;
+    pthread_cond_signal(&node->condition_cond);
+    head->next_thread = node->next_thread;
 }
 
 int WORKER_THREAD::dequeue_worker(int sockfd)
@@ -86,7 +82,23 @@ int WORKER_THREAD::dequeue_worker(int sockfd)
         dequeue_from_pool(head->next_thread, sockfd);
         return 1;
     }
-    printf("thread pool is empty\n");
+    else {
+        printf("thread pool is empty\n");
+        while(1) {
+            if (pthread_mutex_trylock(&queue_mutex) != 0) {
+                if (nanosleep(&req, &rem) != 0) {
+                     printf("nano sleep execution failed\n");
+                }
+            }
+            else {
+                tail = NULL;
+                if (pthread_mutex_unlock(&queue_mutex) != 0) {
+                    printf("mutex unlock after setting tail to NULL failed\n");
+                }
+                break;
+            }
+        }
+    }
     return 0;
 }
 
