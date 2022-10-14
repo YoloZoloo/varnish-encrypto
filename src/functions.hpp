@@ -209,7 +209,6 @@ int backend_write(SSL *ssl, char *client_message)
             return SUCCESS;
         }
         else if (ret == 0) {
-            printf("SSL_write returned 0 \n");
             return FAIL;
         }
         else {
@@ -251,8 +250,6 @@ int read_backend_write_client(SSL *ssl, int client_socket)
         }
         bytes = SSL_read(ssl, buf, sizeof(buf)); /* get reply & decrypt */
         if (bytes == 0) {
-            printf("SSL_read returned 0 for fd %d, client_sd: %d\n", 
-                SSL_get_fd(ssl), client_socket);
             return RECONNECT; //it can be clean shutdown on the peer end
         }
         else if (bytes < 0)
