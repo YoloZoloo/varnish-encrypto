@@ -1,0 +1,19 @@
+name: Varnish-encrypto CI
+
+on:
+  push:
+    branches: main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: install openssl library
+        run: sudo apt install -y openssl
+      - name: mkdir build
+        run: cmake -B build
+      - name: build
+        run: cmake --build build
