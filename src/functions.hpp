@@ -135,7 +135,6 @@ void ShowCerts(SSL *ssl)
 char *read_from_client(int socket_front)
 {
     char *client_buffer = (char *)calloc(1024, sizeof(char));
-    char *null_pointer = NULL;
     int read_from_client;
 
     read_from_client = read(socket_front, client_buffer, 1024); /* get reply & decrypt */
@@ -145,7 +144,7 @@ char *read_from_client(int socket_front)
             printf("%d fd - failed reading from client\n", socket_front);
         #endif
         free(client_buffer);
-        return null_pointer;
+        return NULL;
     }
     else if (read_from_client == 0)
     {
@@ -153,9 +152,8 @@ char *read_from_client(int socket_front)
             printf("%d fd - empty request\n", socket_front);
         #endif
         free(client_buffer);
-        return null_pointer;
+        return NULL;
     }
-    free(null_pointer);
     return client_buffer;
 }
 
@@ -267,7 +265,6 @@ int read_backend_write_client(SSL *ssl, int client_socket)
                 printf("SSL_ERROR_SSL\n");
                 return FAIL;
             case SSL_ERROR_SYSCALL:
-                // retry on SSL_ERROR_SYSCALL
                 printf("SSL_ERROR_SYSCALL\n");
             case SSL_ERROR_NONE:
                 printf("SSL_ERROR_SSL\n");

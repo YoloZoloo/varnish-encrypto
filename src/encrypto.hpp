@@ -109,7 +109,6 @@ public:
     int  dequeue_worker(int sockfd);
     void queue_to_pool(worker_thread *node);
     void close_idle_connections(worker_thread *node);
-    void dequeue_from_pool(worker_thread *node, int connfd);
 };
 
 class WORKER_THREAD;

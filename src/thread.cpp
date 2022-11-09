@@ -65,13 +65,6 @@ void WORKER_THREAD::push(worker_thread **head, worker_thread **tail, int node_nu
 /** take thread from the front of the list
 and assign task to it.
 */
-void WORKER_THREAD::dequeue_from_pool(worker_thread * node, int sockfd)
-{
-    node->client_sd = sockfd;
-    node->status = STATUS_READY;
-    pthread_cond_signal(&node->condition_cond);
-    head->next_thread = node->next_thread;
-}
 
 int WORKER_THREAD::dequeue_worker(int sockfd)
 {
@@ -79,7 +72,10 @@ int WORKER_THREAD::dequeue_worker(int sockfd)
         printf("head_idle is NULL\n");
     }
     if(head->next_thread != NULL) {
-        dequeue_from_pool(head->next_thread, sockfd);
+        head->next_thread->client_sd = sockfd;
+        head->next_thread->status = STATUS_READY;
+        pthread_cond_signal(&head->next_thread->condition_cond);
+        head->next_thread = head->next_thread->next_thread;
         return 1;
     }
     else {
