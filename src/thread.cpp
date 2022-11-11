@@ -166,6 +166,12 @@ void *handle_thread_task(void *Node)
     SSL *ssl = SSL_new(ctx);
     node->ssl = ssl;
 
+    readbuffer *rb = (readbuffer *) malloc (sizeof(readbuffer));
+    rb->buf = (char *) malloc(RB_SIZE * sizeof(char));
+    rb->head = rb->buf;
+    rb->tail = rb->head;
+    rb->data_len = 0;
+
     for (;;)
     {
         if (node->status == STATUS_RETURNING)
@@ -182,11 +188,11 @@ void *handle_thread_task(void *Node)
         // REQUEST HANDLING STARTS HERE
         if(node->status == STATUS_READY)
         {
-            handle_request(node);
+            handle_request(node, rb);
         }
     }
 }
-void handle_backend(worker_thread *node, char* client_message)
+void handle_backend(worker_thread *node, char* client_message, readbuffer * rb)
 {
     int be_w_ret;
     int rbe_wc_ret;
@@ -204,7 +210,7 @@ void handle_backend(worker_thread *node, char* client_message)
         {
             be_w_ret = backend_write(node->ssl, client_message);
             if (be_w_ret == SUCCESS) {
-                if (read_backend_write_client(node->ssl, node->client_sd) == SUCCESS) {
+                if (read_backend_write_client(node->ssl, node->client_sd, rb) == SUCCESS) {
                     node->connection = IDLE;
                 }
                 else {
@@ -215,7 +221,7 @@ void handle_backend(worker_thread *node, char* client_message)
             else if (be_w_ret == RECONNECT) {
                 close(node->backend_sd);
                 node->connection = INACTIVE;
-                handle_backend(node, client_message);
+                handle_backend(node, client_message, rb);
             }
             else {
                 node->connection = INACTIVE;
@@ -230,20 +236,20 @@ void handle_backend(worker_thread *node, char* client_message)
     else {
         be_w_ret = backend_write(node->ssl, client_message);
         if (be_w_ret == SUCCESS) {
-            rbe_wc_ret = read_backend_write_client(node->ssl, node->client_sd);
+            rbe_wc_ret = read_backend_write_client(node->ssl, node->client_sd, rb);
             if (rbe_wc_ret == SUCCESS) {
                 node->connection = IDLE;
             }
             else if (rbe_wc_ret == RECONNECT) {
                 close(node->backend_sd);
                 node->connection = INACTIVE;
-                handle_backend(node, client_message);
+                handle_backend(node, client_message, rb);
             }
         }
         else if (be_w_ret == RECONNECT) {
             close(node->backend_sd);
             node->connection = INACTIVE;
-            handle_backend(node, client_message);
+            handle_backend(node, client_message, rb);
         }
         else {
             node->connection = INACTIVE;
@@ -255,12 +261,12 @@ void handle_backend(worker_thread *node, char* client_message)
     }
 }
 
-void handle_request(worker_thread *node) {
+void handle_request(worker_thread *node, readbuffer *rb) {
     char *client_message = read_from_client(node->client_sd);
     // NULL means unsuccessful reading from the client
     if (client_message != NULL)
     {
-        handle_backend(node, client_message);
+        handle_backend(node, client_message, rb);
         if(node->connection == INACTIVE)
         {
             shutdown(node->backend_sd, 2);
