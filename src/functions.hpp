@@ -11,7 +11,30 @@
 #include <openssl/err.h>
 #include <openssl/bio.h>
 #include <fcntl.h>
+#include <cassert>
 
+char * readbuffer_write_ptr (readbuffer * rb) {
+    assert(rb->data_len < RB_SIZE);
+    return rb->tail;
+}
+
+char * readbuffer_read_ptr (readbuffer * rb) {
+    return rb->head;
+}
+
+int readbuffer_write_append (readbuffer * rb, int length) {
+    rb->tail = rb->tail + length;
+    rb->data_len += length;
+    if(rb->data_len + BACKEND_BUFFER >= RB_SIZE) {
+        return -1;
+    }
+    return 0;
+}
+
+void readbuffer_cleanup (readbuffer * rb ) {
+    rb->data_len = 0;
+    rb->tail = rb->head;
+}
 struct CLIENT_SOCKET listen_on_socket(int server_port)
 {
     int server_fd;
@@ -236,17 +259,16 @@ int backend_write(SSL *ssl, char *client_message)
     return FAIL;
 }
 
-int read_backend_write_client(SSL *ssl, int client_socket)
+int read_backend_write_client(SSL *ssl, int client_socket, readbuffer *rb)
 {
     int ret;
     int bytes;
-    char buf[BACKEND_BUFFER] = {0};
     do
     {
         if (! fd_is_valid (SSL_get_fd(ssl)) ) {
             return FAIL;
         }
-        bytes = SSL_read(ssl, buf, BACKEND_BUFFER + 1); /* get reply & decrypt */
+        bytes = SSL_read(ssl, readbuffer_write_ptr(rb), BACKEND_BUFFER + 1); /* get reply & decrypt */
         if (bytes == 0) {
             return RECONNECT; //it can be clean shutdown on the peer end
         }
@@ -273,8 +295,13 @@ int read_backend_write_client(SSL *ssl, int client_socket)
             }
             return FAIL;
         }
-        buf[bytes] = 0;
-        send(client_socket, buf, bytes, 0);
+        if(readbuffer_write_append(rb, bytes) < 0) {
+            send(client_socket, readbuffer_read_ptr(rb), rb->data_len, 0);
+            readbuffer_cleanup(rb);
+        }
     } while (SSL_pending(ssl) > 0 || bytes == BACKEND_BUFFER);
+    send(client_socket, readbuffer_read_ptr(rb), rb->data_len, 0);
+    readbuffer_cleanup(rb);
     return SUCCESS;
 }
+

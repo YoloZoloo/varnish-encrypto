@@ -22,11 +22,12 @@
 #define FAIL -1
 #define RECONNECT 0
 #define SUCCESS 1
-#define THREAD_NUMBER 350
+#define THREAD_NUMBER 300
 #define MAX_EVENTS 3
 
 #define CLIENT_SOCKET_BACKLOG 100
 #define BACKEND_BUFFER 16384
+#define RB_SIZE 200000
 #define IDLE 1
 #define INACTIVE 0
 
@@ -46,6 +47,13 @@ int client_sd;
 int BACKEND_SD;
 struct sockaddr_in backend_address;
 
+typedef struct readbuffer {
+    char *buf;
+    char *head;
+    char *tail;
+    int data_len;
+} readbuffer;
+
 typedef struct wt
 {
     pthread_mutex_t condition_mutex;
@@ -60,9 +68,9 @@ typedef struct wt
     int connection;
 } worker_thread;
 
-void handle_request(worker_thread *node);
+void handle_request(worker_thread *node, readbuffer *rb);
 void *handle_thread_task(void *Node);
-void handle_backend(worker_thread *node, char* client_message, bool reconnecting);
+void handle_backend(worker_thread *node, char* client_message, bool reconnecting, readbuffer *rb);
 
 // backend host
 struct hostent *host;
