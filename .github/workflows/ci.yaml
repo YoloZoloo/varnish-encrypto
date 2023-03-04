@@ -21,5 +21,6 @@ jobs:
         run: cmake --build build
       - name: start server
         run: build/varnish-encrypto 8080 github.com 443
-      - name: test
-        run: curl "http://localhost:8080/YoloZoloo/varnish-encrypto" -v -H "Host: github.com"
+      - name: testing
+        run: | 
+          curl "http://localhost:8080/YoloZoloo/varnish-encrypto" -v -H "Host: github.com"
