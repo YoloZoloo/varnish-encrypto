@@ -5,15 +5,22 @@ on:
     branches: main
 
 jobs:
-  build:
+  build_and_test:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
 
-      - name: install openssl library
-        run: sudo apt install -y openssl
+      - name: install openssl and curl
+        run: sudo apt-get -y update
+      - name: install openssl and curl
+        run: sudo apt install -y openssl curl
       - name: mkdir build
         run: cmake -B build
       - name: build
         run: cmake --build build
+      - name: start server
+        run: build/varnish-encrypto 8080 github.com 443
+      - name: testing
+        run: | 
+          curl "http://localhost:8080/YoloZoloo/varnish-encrypto" -v -H "Host: github.com"
