@@ -5,7 +5,7 @@ on:
     branches: main
 
 jobs:
-  build:
+  build_and_test:
     runs-on: ubuntu-latest
 
     steps:
@@ -17,3 +17,7 @@ jobs:
         run: cmake -B build
       - name: build
         run: cmake --build build
+      - name: start server
+        run: build/varnish-encrypto 8080 github.com 443
+      - name: test
+        run: curl http://localhost:8080/YoloZoloo/varnish-encrypto -v -H "Host: github.com"
