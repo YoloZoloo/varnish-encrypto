@@ -12,6 +12,8 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: install openssl and curl
+        run: sudo apt-get -y update
+      - name: install openssl and curl
         run: sudo apt install -y openssl curl
       - name: mkdir build
         run: cmake -B build
@@ -20,4 +22,4 @@ jobs:
       - name: start server
         run: build/varnish-encrypto 8080 github.com 443
       - name: test
-        run: curl http://localhost:8080/YoloZoloo/varnish-encrypto -v -H "Host: github.com"
+        run: curl "http://localhost:8080/YoloZoloo/varnish-encrypto" -v -H "Host: github.com"
